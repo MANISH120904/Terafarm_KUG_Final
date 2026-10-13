@@ -132,12 +132,10 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
   }
 
   Future<void> _chooseMapLocation() async {
-    final initial = LocationService().currentPosition != null
-        ? latLong.LatLng(
-            LocationService().currentPosition!.latitude,
-            LocationService().currentPosition!.longitude,
-          )
-        : latLong.LatLng(37.7749, -122.4194);
+    final pos = LocationService().currentPosition;
+    final initial = pos != null
+        ? latLong.LatLng(pos.latitude, pos.longitude)
+        : const latLong.LatLng(13.0827, 80.2707);
 
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
@@ -150,26 +148,9 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
       final newAddr = result['address'] as String;
       final lat = result['lat'] as double;
       final lng = result['lng'] as double;
-      await _storeUserLocation(newAddr, lat, lng);
-      LocationService().currentAddress = newAddr;
-      try {
-        LocationService().currentPosition = Position(
-          latitude: lat,
-          longitude: lng,
-          timestamp: DateTime.now(),
-          accuracy: 1.0,
-          altitude: 0.0,
-          heading: 0.0,
-          speed: 0.0,
-          speedAccuracy: 0.0,
-          altitudeAccuracy: 1.0,
-          headingAccuracy: 1.0,
-          isMocked: false,
-        );
-      } catch (_) {
-        LocationService().currentPosition = null;
-      }
-      setState(() => _userAddress = newAddr);
+      LocationService().setManualLocation(newAddr, lat, lng);
+      await LocationService().saveToFirestore();
+      if (mounted) setState(() => _userAddress = newAddr);
     }
   }
 

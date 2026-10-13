@@ -88,12 +88,10 @@ class _CommunityPageState extends State<CommunityPage> with TickerProviderStateM
   }
 
   Future<void> _chooseMapLocation() async {
-    final initialLL = LocationService().currentPosition != null
-        ? latLong.LatLng(
-            LocationService().currentPosition!.latitude,
-            LocationService().currentPosition!.longitude,
-          )
-        : latLong.LatLng(37.7749, -122.4194);
+    final pos = LocationService().currentPosition;
+    final initialLL = pos != null
+        ? latLong.LatLng(pos.latitude, pos.longitude)
+        : const latLong.LatLng(13.0827, 80.2707);
 
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
@@ -102,9 +100,11 @@ class _CommunityPageState extends State<CommunityPage> with TickerProviderStateM
     );
     if (result != null) {
       final newAddr = result['address'] as String;
-      LocationService().currentAddress = newAddr;
-      setState(() => _userAddress = newAddr);
-      // you can update LocationService().currentPosition similarly if you want
+      final lat = result['lat'] as double;
+      final lng = result['lng'] as double;
+      LocationService().setManualLocation(newAddr, lat, lng);
+      await LocationService().saveToFirestore();
+      if (mounted) setState(() => _userAddress = newAddr);
     }
   }
 

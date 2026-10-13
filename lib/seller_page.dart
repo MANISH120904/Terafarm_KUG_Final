@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:latlong2/latlong.dart' as latLong;
-import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -60,7 +59,12 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
     // Start the shimmer animation cycle
     _startShimmerCycle();
     
-    _updateLocationFromService();
+    LocationService().addListener(_onSharedLocation);
+    final cached = LocationService().currentAddress;
+    if (cached != null && cached.isNotEmpty) {
+      _userAddress = cached;
+    }
+    _syncFromSharedLocation();
     _fetchUserProfile();
   }
 
@@ -80,6 +84,7 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    LocationService().removeListener(_onSharedLocation);
     _shimmerController.dispose();
     _shimmerTimer?.cancel();
     super.dispose();
@@ -88,10 +93,10 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _updateLocationFromService();
+    _syncFromSharedLocation();
   }
 
-  void _updateLocationFromService() {
+  void _syncFromSharedLocation() {
     final latest = LocationService().currentAddress;
     if (latest != null && latest.isNotEmpty && latest != _userAddress) {
       setState(() => _userAddress = latest);
@@ -100,21 +105,28 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
     }
   }
 
+  void _onSharedLocation() {
+    if (!mounted) return;
+    final addr = LocationService().currentAddress;
+    if (addr != null && addr.isNotEmpty && addr != _userAddress) {
+      setState(() => _userAddress = addr);
+    }
+  }
+
   Future<void> _fetchUserLocation() async {
     final loc = AppLocalizations.of(context)!;
     try {
-      await LocationService().determinePosition();
+      await LocationService().ensureLocation();
       final addr = LocationService().currentAddress ?? '';
-      setState(() => _userAddress = addr.isNotEmpty
-          ? addr
-          : loc.fetchingLocation);
-
-      final pos = LocationService().currentPosition;
-      if (pos != null) {
-        await _storeUserLocation(addr, pos.latitude, pos.longitude);
-      }
+      if (!mounted) return;
+      setState(() => _userAddress =
+          addr.isNotEmpty ? addr : loc.unableFetchLocation);
+      await LocationService().saveToFirestore();
     } catch (_) {
-      setState(() => _userAddress = loc.unableFetchLocation);
+      if (!mounted) return;
+      setState(() => _userAddress = LocationService().currentAddress?.isNotEmpty == true
+          ? LocationService().currentAddress!
+          : loc.unableFetchLocation);
     }
   }
 
@@ -139,31 +151,11 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _storeUserLocation(
-      String address, double lat, double lon) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .set({
-          'u_id': user.uid,
-          'location': {
-            'address': address,
-            'latitude': lat,
-            'longitude': lon,
-          },
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-  }
-
   Future<void> _chooseMapLocation() async {
-    final initial = LocationService().currentPosition != null
-        ? latLong.LatLng(
-            LocationService().currentPosition!.latitude,
-            LocationService().currentPosition!.longitude,
-          )
-        : latLong.LatLng(37.7749, -122.4194);
+    final pos = LocationService().currentPosition;
+    final initial = pos != null
+        ? latLong.LatLng(pos.latitude, pos.longitude)
+        : const latLong.LatLng(13.0827, 80.2707);
 
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
@@ -176,26 +168,9 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
       final newAddr = result['address'] as String;
       final lat = result['lat'] as double;
       final lng = result['lng'] as double;
-      await _storeUserLocation(newAddr, lat, lng);
-      LocationService().currentAddress = newAddr;
-      try {
-        LocationService().currentPosition = Position(
-          latitude: lat,
-          longitude: lng,
-          timestamp: DateTime.now(),
-          accuracy: 1.0,
-          altitude: 0.0,
-          heading: 0.0,
-          speed: 0.0,
-          speedAccuracy: 0.0,
-          altitudeAccuracy: 1.0,
-          headingAccuracy: 1.0,
-          isMocked: false,
-        );
-      } catch (_) {
-        LocationService().currentPosition = null;
-      }
-      setState(() => _userAddress = newAddr);
+      LocationService().setManualLocation(newAddr, lat, lng);
+      await LocationService().saveToFirestore();
+      if (mounted) setState(() => _userAddress = newAddr);
     }
   }
 

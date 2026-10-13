@@ -128,15 +128,47 @@ class _AddressMapPickerState extends State<AddressMapPicker> {
         : '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}';
   }
 
-  Future<void> _searchPlaces(String query) async {
+  String _enrichIndiaQuery(String query) {
+    final q = query.trim();
+    final lower = q.toLowerCase();
+    if (lower.contains('india') ||
+        lower.contains('chennai') ||
+        lower.contains('tamil') ||
+        lower.contains('kolathur') ||
+        lower.contains('hyderabad') ||
+        lower.contains('bengaluru') ||
+        lower.contains('bangalore') ||
+        lower.contains('mumbai') ||
+        lower.contains('delhi')) {
+      return q;
+    }
+    // Bias typo-prone local searches toward India.
+    return '$q, India';
+  }
+
+  Future<void> _searchPlaces(String query, {bool autoSelectFirst = false}) async {
     setState(() => _isSearching = true);
     try {
-      var results = await _searchPhoton(query);
+      final enriched = _enrichIndiaQuery(query);
+      var results = await _searchNominatim(enriched);
       if (results.isEmpty) {
-        results = await _searchNominatim(query);
+        results = await _searchPhoton(enriched);
+      }
+      if (results.isEmpty && enriched != query.trim()) {
+        results = await _searchNominatim(query.trim());
       }
       if (!mounted) return;
       setState(() => _searchResults = results);
+      if (results.isEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No places found. Try a fuller address (area, city).'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else if (autoSelectFirst && results.isNotEmpty) {
+        _selectSearchResult(results.first, refineAddress: false);
+      }
     } catch (_) {
       if (mounted) setState(() => _searchResults.clear());
     } finally {
@@ -151,6 +183,7 @@ class _AddressMapPickerState extends State<AddressMapPicker> {
       'lon': '${_selectedLocation.longitude}',
       'limit': '10',
       'lang': 'en',
+      'bbox': '68.1,6.5,97.4,35.5', // India-ish
     });
     final response = await http.get(url, headers: _httpHeaders).timeout(
           const Duration(seconds: 8),
@@ -268,7 +301,10 @@ class _AddressMapPickerState extends State<AddressMapPicker> {
 
   double _rad(double deg) => deg * math.pi / 180.0;
 
-  void _selectSearchResult(Map<String, dynamic> result) {
+  void _selectSearchResult(
+    Map<String, dynamic> result, {
+    bool refineAddress = false,
+  }) {
     final lat = result['lat'] as double;
     final lng = result['lng'] as double;
 
@@ -279,9 +315,15 @@ class _AddressMapPickerState extends State<AddressMapPicker> {
       _searchController.clear();
     });
 
-    _mapController.move(_selectedLocation, 17.5);
-    // Refine street-level address at the exact pin.
-    _reverseGeocode();
+    try {
+      _mapController.move(_selectedLocation, 17.5);
+    } catch (_) {}
+
+    // Don't reverse-geocode after search — nearby POIs overwrite the match
+    // (e.g. searched Kolathur → showed a clinic next door).
+    if (refineAddress) {
+      _reverseGeocode();
+    }
   }
 
   void _onTap(TapPosition tapPosition, LatLng latlng) {
@@ -448,6 +490,7 @@ class _AddressMapPickerState extends State<AddressMapPicker> {
                   children: [
                     TextField(
                       controller: _searchController,
+                      textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
                         hintText: 'Search area, street, landmark...',
                         prefixIcon: const Icon(Icons.search, color: Colors.green),
@@ -480,11 +523,16 @@ class _AddressMapPickerState extends State<AddressMapPicker> {
                         fillColor: Colors.white.withOpacity(0.8),
                       ),
                       onChanged: _onSearchChanged,
+                      onSubmitted: (q) {
+                        if (q.trim().length >= 2) {
+                          _searchPlaces(q.trim(), autoSelectFirst: true);
+                        }
+                      },
                     ),
                     if (_searchResults.isNotEmpty)
                       Container(
                         margin: const EdgeInsets.only(top: 8),
-                        height: 140,
+                        height: 180,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),

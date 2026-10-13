@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart' as latLong;
@@ -34,6 +33,9 @@ class _HomePageState extends State<HomePage> {
   final List<Map<String, dynamic>> _languages =
       List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
 
+  // Default India (Chennai) — never SF.
+  static const _fallback = latLong.LatLng(13.0827, 80.2707);
+
   @override
   void initState() {
     super.initState();
@@ -43,53 +45,55 @@ class _HomePageState extends State<HomePage> {
         statusBarIconBrightness: Brightness.light,
       ),
     );
+    LocationService().addListener(_onSharedLocation);
+    final cached = LocationService().currentAddress;
+    if (cached != null && cached.isNotEmpty) {
+      _userAddress = cached;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchUserLocation());
+  }
+
+  @override
+  void dispose() {
+    LocationService().removeListener(_onSharedLocation);
+    super.dispose();
+  }
+
+  void _onSharedLocation() {
+    if (!mounted) return;
+    final addr = LocationService().currentAddress;
+    if (addr != null && addr.isNotEmpty && addr != _userAddress) {
+      setState(() => _userAddress = addr);
+    }
   }
 
   Future<void> _fetchUserLocation() async {
     final loc = AppLocalizations.of(context)!;
     try {
-      await LocationService().determinePosition();
+      // Prefer saved / already-confirmed location (Buyer↔Farmer share it).
+      await LocationService().ensureLocation();
       final addr = LocationService().currentAddress ?? '';
+      if (!mounted) return;
       setState(() {
-        _userAddress = addr.isNotEmpty ? addr : loc.noDescription;
+        _userAddress =
+            addr.isNotEmpty ? addr : loc.unableFetchLocation;
       });
-
-      final pos = LocationService().currentPosition;
-      if (pos != null) {
-        await _storeUserLocation(addr, pos.latitude, pos.longitude);
-      }
+      await LocationService().saveToFirestore();
     } catch (_) {
+      if (!mounted) return;
       setState(() {
-        _userAddress = loc.noDescription;
+        _userAddress = LocationService().currentAddress?.isNotEmpty == true
+            ? LocationService().currentAddress!
+            : loc.unableFetchLocation;
       });
     }
   }
 
-  Future<void> _storeUserLocation(String address, double lat, double lon) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .set({
-      'u_id': user.uid,
-      'location': {
-        'address': address,
-        'latitude': lat,
-        'longitude': lon,
-      },
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
-
   Future<void> _chooseMapLocation() async {
-    final initial = LocationService().currentPosition != null
-        ? latLong.LatLng(
-            LocationService().currentPosition!.latitude,
-            LocationService().currentPosition!.longitude,
-          )
-        : latLong.LatLng(37.7749, -122.4194);
+    final pos = LocationService().currentPosition;
+    final initial = pos != null
+        ? latLong.LatLng(pos.latitude, pos.longitude)
+        : _fallback;
 
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
@@ -102,8 +106,9 @@ class _HomePageState extends State<HomePage> {
       final newAddr = result['address'] as String;
       final lat = result['lat'] as double;
       final lng = result['lng'] as double;
-      await _storeUserLocation(newAddr, lat, lng);
-      setState(() => _userAddress = newAddr);
+      LocationService().setManualLocation(newAddr, lat, lng);
+      await LocationService().saveToFirestore();
+      if (mounted) setState(() => _userAddress = newAddr);
     }
   }
 
