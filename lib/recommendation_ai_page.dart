@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'menu_page.dart';
+import 'config/api_keys.dart';
 
 class RecommendationForm extends StatefulWidget {
   const RecommendationForm({super.key});
@@ -26,31 +28,83 @@ class _RecommendationFormState extends State<RecommendationForm> {
   String _selectedTimeUnit = 'hours';
 
   String _result = '';
+  bool _loading = false;
 
-  // This function collects the input and prints a static recommendation message.
-  void _getRecommendation() {
-    // Retrieve input values
-    final String city = _cityController.text;
-    final String areaSize = _areaSizeController.text;
-    final String dailyTime = _dailyTimeController.text;
+  Future<void> _getRecommendation() async {
+    final String city = _cityController.text.trim();
+    final String areaSize = _areaSizeController.text.trim();
+    final String dailyTime = _dailyTimeController.text.trim();
     final String spaceType = _selectedSpaceType;
     final String timeUnit = _selectedTimeUnit;
 
-    // Build a static recommendation message based on the input
-    final String recommendation = "Based on your input:\n"
+    if (city.isEmpty || areaSize.isEmpty || dailyTime.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill city, area size, and care time.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _result = '';
+    });
+
+    final header = "Based on your input:\n"
         "City: $city\n"
         "Area Size: $areaSize m²\n"
         "Space Type: $spaceType\n"
-        "Daily Care Time: $dailyTime $timeUnit\n\n"
-        "We recommend trying a high-light exposure plant care system for optimal growth.";
+        "Daily Care Time: $dailyTime $timeUnit\n\n";
 
-    // Update the UI to display the result
-    setState(() {
-      _result = recommendation;
-    });
+    if (!ApiKeys.hasGemini) {
+      setState(() {
+        _result = '$header'
+            'Gemini API key missing. Add GEMINI_API_KEY to dart_defines.json '
+            'and run with --dart-define-from-file=dart_defines.json.';
+        _loading = false;
+      });
+      return;
+    }
 
-    // Optionally, print the output to the console for debugging
-    print("Static Recommendation:\n$recommendation");
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-3-flash-preview',
+        apiKey: ApiKeys.gemini,
+        generationConfig: GenerationConfig(maxOutputTokens: 1024, temperature: 0.7),
+      );
+      final prompt = '''
+You are an expert agricultural market advisor for India.
+Given:
+- City: $city
+- Growing area: $areaSize m²
+- Space type: $spaceType
+- Daily care time available: $dailyTime $timeUnit
+
+Recommend ONLY sellable vegetables or fruit plants (no ornamentals, herbs-only, or flowers unless they are edible crops sold in local markets).
+Pick 3-5 crops that:
+1. Fit this space type and area
+2. Suit the climate of $city
+3. Have good local market demand / resale value for small growers
+4. Match the available daily care time
+
+For each crop include: why it sells well locally, light/water needs, expected harvest timeline, and a short care tip.
+Be practical, concise, and farmer-friendly. Use plain text (no markdown asterisks).
+''';
+      final resp = await model.generateContent([Content.text(prompt)]);
+      final text = (resp.text ?? '').replaceAll('*', '').trim();
+      if (!mounted) return;
+      setState(() {
+        _result = text.isEmpty
+            ? '${header}We could not generate a recommendation. Try again.'
+            : '$header$text';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _result = '${header}Error: $e';
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -271,11 +325,10 @@ class _RecommendationFormState extends State<RecommendationForm> {
                 ],
               ),
               const SizedBox(height: 20),
-              // Button to trigger the static recommendation
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _getRecommendation,
+                  onPressed: _loading ? null : _getRecommendation,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kPrimaryGreen,
                     shape: RoundedRectangleBorder(
@@ -283,14 +336,13 @@ class _RecommendationFormState extends State<RecommendationForm> {
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: const Text(
-                    "Get My Recommendation",
-                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  child: Text(
+                    _loading ? 'Getting recommendation...' : 'Get My Recommendation',
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              // Display the static result
               if (_result.isNotEmpty)
                 Container(
                   decoration: BoxDecoration(

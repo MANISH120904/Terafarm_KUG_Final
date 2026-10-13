@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SubsidiesPage extends StatefulWidget {
   const SubsidiesPage({super.key});
@@ -11,31 +12,45 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
   final List<Map<String, dynamic>> subsidies = [
     {
       'title': 'Pradhan Mantri Kisan Samman Nidhi',
-      'description': 'Direct income support of ₹6,000 per year to small and marginal farmers',
-      'eligibility': 'Small and marginal farmer families with cultivable land up to 2 hectares',
+      'description':
+          'Direct income support of ₹6,000 per year to small and marginal farmers',
+      'eligibility':
+          'Small and marginal farmer families with cultivable land up to 2 hectares',
       'amount': '₹6,000 per year',
       'status': 'Active',
+      'applyUrl': 'https://pmkisan.gov.in/',
+      'infoUrl': 'https://pmkisan.gov.in/',
     },
     {
       'title': 'Kisan Credit Card (KCC)',
-      'description': 'Credit facility for farmers to meet production credit and investment credit requirements',
-      'eligibility': 'All farmers including tenant farmers, sharecroppers, and oral lessees',
+      'description':
+          'Credit facility for farmers to meet production credit and investment credit requirements',
+      'eligibility':
+          'All farmers including tenant farmers, sharecroppers, and oral lessees',
       'amount': 'Up to ₹3 lakh at 4% interest',
       'status': 'Active',
+      'applyUrl': 'https://www.myscheme.gov.in/schemes/kcc',
+      'infoUrl': 'https://www.myscheme.gov.in/schemes/kcc',
     },
     {
       'title': 'Pradhan Mantri Fasal Bima Yojana',
-      'description': 'Crop insurance scheme providing financial support to farmers in case of crop failure',
+      'description':
+          'Crop insurance scheme providing financial support to farmers in case of crop failure',
       'eligibility': 'All farmers growing notified crops in notified areas',
       'amount': 'Premium subsidy up to 2% for Kharif and 1.5% for Rabi crops',
       'status': 'Active',
+      'applyUrl': 'https://pmfby.gov.in/',
+      'infoUrl': 'https://pmfby.gov.in/',
     },
     {
       'title': 'Soil Health Card Scheme',
-      'description': 'Provides soil health cards to farmers with recommendations for appropriate nutrients',
+      'description':
+          'Provides soil health cards to farmers with recommendations for appropriate nutrients',
       'eligibility': 'All farmers across the country',
       'amount': 'Free soil testing and recommendations',
       'status': 'Active',
+      'applyUrl': 'https://www.soilhealth.dac.gov.in/',
+      'infoUrl': 'https://www.soilhealth.dac.gov.in/',
     },
     {
       'title': 'National Agriculture Market (e-NAM)',
@@ -43,14 +58,48 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
       'eligibility': 'Farmers, traders, and buyers registered on the platform',
       'amount': 'Transparent price discovery and better market access',
       'status': 'Active',
+      'applyUrl': 'https://www.enam.gov.in/',
+      'infoUrl': 'https://www.enam.gov.in/',
     },
   ];
+
+  Future<void> _openOfficialUrl(String url, {String? label}) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid application link')),
+      );
+      return;
+    }
+
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not open ${label ?? 'portal'}. Open manually: $url',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open browser: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Government Subsidies'),
+        title: const Text('Government Subsidies & Schemes'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
@@ -78,9 +127,12 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
                 ),
               ),
               trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: subsidy['status'] == 'Active' ? Colors.green : Colors.orange,
+                  color: subsidy['status'] == 'Active'
+                      ? Colors.green
+                      : Colors.orange,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -107,7 +159,7 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () {
-                                _showApplicationDialog(context, subsidy['title']);
+                                _showApplicationDialog(context, subsidy);
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
@@ -170,35 +222,37 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
     );
   }
 
-  void _showApplicationDialog(BuildContext context, String subsidyName) {
+  void _showApplicationDialog(
+    BuildContext context,
+    Map<String, dynamic> subsidy,
+  ) {
+    final subsidyName = subsidy['title'] as String;
+    final applyUrl = subsidy['applyUrl'] as String;
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text('Apply for $subsidyName'),
-          content: const Text(
-            'This will redirect you to the official government portal for application. Make sure you have all required documents ready.',
+          content: Text(
+            'This opens the official portal:\n$applyUrl\n\n'
+            'Keep Aadhaar, bank, and land documents ready.',
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Redirecting to application portal for $subsidyName'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await _openOfficialUrl(applyUrl, label: subsidyName);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Proceed'),
+              child: const Text('Open Official Site'),
             ),
           ],
         );
@@ -209,7 +263,7 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
   void _showMoreInfoDialog(BuildContext context, Map<String, dynamic> subsidy) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text(subsidy['title']),
           content: SingleChildScrollView(
@@ -236,6 +290,12 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
                 Text(subsidy['amount']),
                 const SizedBox(height: 16),
                 const Text(
+                  'Official portal:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(subsidy['infoUrl'] ?? subsidy['applyUrl'] ?? ''),
+                const SizedBox(height: 16),
+                const Text(
                   'Required Documents:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
@@ -251,8 +311,21 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Close'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                final url =
+                    (subsidy['infoUrl'] ?? subsidy['applyUrl']) as String;
+                await _openOfficialUrl(url, label: subsidy['title'] as String);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Visit Site'),
             ),
           ],
         );
@@ -263,27 +336,35 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
   void _showApplicationStatus(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Application Status'),
-          content: const Column(
+          title: const Text('Quick links'),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.pending, color: Colors.orange),
-                title: Text('PM-KISAN'),
-                subtitle: Text('Application under review'),
+                leading: const Icon(Icons.open_in_new, color: Colors.green),
+                title: const Text('PM-KISAN portal'),
+                subtitle: const Text('Check application status'),
+                onTap: () async {
+                  Navigator.of(dialogContext).pop();
+                  await _openOfficialUrl('https://pmkisan.gov.in/');
+                },
               ),
               ListTile(
-                leading: Icon(Icons.check_circle, color: Colors.green),
-                title: Text('Soil Health Card'),
-                subtitle: Text('Approved - Card issued'),
+                leading: const Icon(Icons.open_in_new, color: Colors.green),
+                title: const Text('myScheme.gov.in'),
+                subtitle: const Text('Browse all farmer schemes'),
+                onTap: () async {
+                  Navigator.of(dialogContext).pop();
+                  await _openOfficialUrl('https://www.myscheme.gov.in/');
+                },
               ),
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Close'),
             ),
           ],

@@ -1,4 +1,4 @@
-import 'package:geolocator/geolocator.dart';
+﻿import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart' as latLong;
@@ -16,9 +16,9 @@ import 'address_map_picker.dart';
 import 'location.dart';
 import 'sustainable.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
 import 'services/navigation_service.dart';
-import 'voice_assistance.dart';
 import 'terra_earth_intelligence_page.dart';
 import 'offline_toolkit_page.dart';
 
@@ -39,12 +39,7 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     // Initialize supported language list for dropdown
-    _languages = [
-      {'name': 'English', 'locale': const Locale('en')},
-      {'name': 'हिन्दी', 'locale': const Locale('hi')},
-      {'name': 'தமிழ்', 'locale': const Locale('ta')},
-      {'name': 'తెలుగు', 'locale': const Locale('te')},
-    ];
+    _languages = List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
     
     // Initialize shimmer animation
     _shimmerController = AnimationController(
@@ -256,20 +251,20 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
     // Update colors to match the green color scheme from your image
     List<Color> buttonColors = [const Color(0xFF4F7942), const Color(0xFF3D5E33)]; // Fern green shades
     
-    if (label.toLowerCase().contains('doctor') || label.toLowerCase().contains('डॉक्टर') || 
-        label.toLowerCase().contains('மருத்துவர்') || label.toLowerCase().contains('వైద్యుడు')) {
+    if (label.toLowerCase().contains('doctor') || label.toLowerCase().contains('à¤¡à¥‰à¤•à¥à¤Ÿà¤°') || 
+        label.toLowerCase().contains('à®®à®°à¯à®¤à¯à®¤à¯à®µà®°à¯') || label.toLowerCase().contains('à°µà±ˆà°¦à±à°¯à±à°¡à±')) {
       buttonColors = [const Color(0xFF4F7942), const Color(0xFF3D5E33)]; // Fern green for doctor
-    } else if (label.toLowerCase().contains('suggest') || label.toLowerCase().contains('सुझाव') ||
-               label.toLowerCase().contains('பரிந்துரை') || label.toLowerCase().contains('సూచన')) {
+    } else if (label.toLowerCase().contains('suggest') || label.toLowerCase().contains('à¤¸à¥à¤à¤¾à¤µ') ||
+               label.toLowerCase().contains('à®ªà®°à®¿à®¨à¯à®¤à¯à®°à¯ˆ') || label.toLowerCase().contains('à°¸à±‚à°šà°¨')) {
       buttonColors = [const Color(0xFF2E8B57), const Color(0xFF228B47)]; // Sea green for suggestions
-    } else if (label.toLowerCase().contains('care') || label.toLowerCase().contains('देखभाल') ||
-               label.toLowerCase().contains('பராമरिप்পு') || label.toLowerCase().contains('సంరక్షణ')) {
+    } else if (label.toLowerCase().contains('care') || label.toLowerCase().contains('à¤¦à¥‡à¤–à¤­à¤¾à¤²') ||
+               label.toLowerCase().contains('à®ªà®°à®¾à´®à¤°à¤¿à¤ªà¯à¦ªà¯') || label.toLowerCase().contains('à°¸à°‚à°°à°•à±à°·à°£')) {
       buttonColors = [const Color(0xFF66CDAA), const Color(0xFF5CBAA0)]; // Medium aquamarine for care
-    } else if (label.toLowerCase().contains('tips') || label.toLowerCase().contains('टिप्स') ||
-               label.toLowerCase().contains('குறிப்புகள்') || label.toLowerCase().contains('చిట్కాలు')) {
+    } else if (label.toLowerCase().contains('tips') || label.toLowerCase().contains('à¤Ÿà¤¿à¤ªà¥à¤¸') ||
+               label.toLowerCase().contains('à®•à¯à®±à®¿à®ªà¯à®ªà¯à®•à®³à¯') || label.toLowerCase().contains('à°šà°¿à°Ÿà±à°•à°¾à°²à±')) {
       buttonColors = [const Color(0xFF8FBC8F), const Color(0xFF7BA47B)]; // Light sage green for tips
-    } else if (label.toLowerCase().contains('rover') || label.toLowerCase().contains('रोवर') ||
-               label.toLowerCase().contains('ரோவர்') || label.toLowerCase().contains('రోవర్')) {
+    } else if (label.toLowerCase().contains('rover') || label.toLowerCase().contains('à¤°à¥‹à¤µà¤°') ||
+               label.toLowerCase().contains('à®°à¯‹à®µà®°à¯') || label.toLowerCase().contains('à°°à±‹à°µà°°à±')) {
       buttonColors = [const Color(0xFF407944), const Color(0xFF2F5A32)]; // Dark forest green for rover
     }
     
@@ -457,20 +452,20 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
   }
 
   IconData _getToolIcon(String label) {
-    if (label.toLowerCase().contains('doctor') || label.toLowerCase().contains('डॉक्टर') || 
-        label.toLowerCase().contains('மருத்துவர்') || label.toLowerCase().contains('వైద్యుడు')) {
+    if (label.toLowerCase().contains('doctor') || label.toLowerCase().contains('à¤¡à¥‰à¤•à¥à¤Ÿà¤°') || 
+        label.toLowerCase().contains('à®®à®°à¯à®¤à¯à®¤à¯à®µà®°à¯') || label.toLowerCase().contains('à°µà±ˆà°¦à±à°¯à±à°¡à±')) {
       return Icons.medical_services_outlined;
-    } else if (label.toLowerCase().contains('suggest') || label.toLowerCase().contains('सुझाव') ||
-               label.toLowerCase().contains('பரிந்துரை') || label.toLowerCase().contains('సూచన')) {
+    } else if (label.toLowerCase().contains('suggest') || label.toLowerCase().contains('à¤¸à¥à¤à¤¾à¤µ') ||
+               label.toLowerCase().contains('à®ªà®°à®¿à®¨à¯à®¤à¯à®°à¯ˆ') || label.toLowerCase().contains('à°¸à±‚à°šà°¨')) {
       return Icons.lightbulb_outline;
-    } else if (label.toLowerCase().contains('care') || label.toLowerCase().contains('देखभाल') ||
-               label.toLowerCase().contains('பராமரிப்பு') || label.toLowerCase().contains('సంరక్షణ')) {
+    } else if (label.toLowerCase().contains('care') || label.toLowerCase().contains('à¤¦à¥‡à¤–à¤­à¤¾à¤²') ||
+               label.toLowerCase().contains('à®ªà®°à®¾à®®à®°à®¿à®ªà¯à®ªà¯') || label.toLowerCase().contains('à°¸à°‚à°°à°•à±à°·à°£')) {
       return Icons.favorite_outline;
-    } else if (label.toLowerCase().contains('tips') || label.toLowerCase().contains('टिप्स') ||
-               label.toLowerCase().contains('குறிப்புகள்') || label.toLowerCase().contains('చిట్కాలు')) {
+    } else if (label.toLowerCase().contains('tips') || label.toLowerCase().contains('à¤Ÿà¤¿à¤ªà¥à¤¸') ||
+               label.toLowerCase().contains('à®•à¯à®±à®¿à®ªà¯à®ªà¯à®•à®³à¯') || label.toLowerCase().contains('à°šà°¿à°Ÿà±à°•à°¾à°²à±')) {
       return Icons.eco_outlined;
-    } else if (label.toLowerCase().contains('rover') || label.toLowerCase().contains('रोवर') ||
-               label.toLowerCase().contains('ரோவர்') || label.toLowerCase().contains('రోవర్')) {
+    } else if (label.toLowerCase().contains('rover') || label.toLowerCase().contains('à¤°à¥‹à¤µà¤°') ||
+               label.toLowerCase().contains('à®°à¯‹à®µà®°à¯') || label.toLowerCase().contains('à°°à±‹à°µà°°à±')) {
       return Icons.smart_toy_outlined;
     } else if (label.toLowerCase().contains('satellite') || label.toLowerCase().contains('analysis')) {
       return Icons.satellite_alt;
@@ -479,20 +474,20 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
   }
 
   String _getToolDescription(String label, AppLocalizations loc) {
-    if (label.toLowerCase().contains('doctor') || label.toLowerCase().contains('डॉक्टर') || 
-        label.toLowerCase().contains('மருத்துவர்') || label.toLowerCase().contains('వైద్యుడు')) {
+    if (label.toLowerCase().contains('doctor') || label.toLowerCase().contains('à¤¡à¥‰à¤•à¥à¤Ÿà¤°') || 
+        label.toLowerCase().contains('à®®à®°à¯à®¤à¯à®¤à¯à®µà®°à¯') || label.toLowerCase().contains('à°µà±ˆà°¦à±à°¯à±à°¡à±')) {
       return loc.diagnosePlantDiseases;
-    } else if (label.toLowerCase().contains('suggest') || label.toLowerCase().contains('सुझाव') ||
-               label.toLowerCase().contains('பரিந்துரை') || label.toLowerCase().contains('సూచన')) {
+    } else if (label.toLowerCase().contains('suggest') || label.toLowerCase().contains('à¤¸à¥à¤à¤¾à¤µ') ||
+               label.toLowerCase().contains('à®ªà®°à¦¿à®¨à¯à®¤à¯à®°à¯ˆ') || label.toLowerCase().contains('à°¸à±‚à°šà°¨')) {
       return loc.personalizedCropRecommendations;
-    } else if (label.toLowerCase().contains('care') || label.toLowerCase().contains('देखभाल') ||
-               label.toLowerCase().contains('பராமरிப்பு') || label.toLowerCase().contains('సంరక్షణ')) {
+    } else if (label.toLowerCase().contains('care') || label.toLowerCase().contains('à¤¦à¥‡à¤–à¤­à¤¾à¤²') ||
+               label.toLowerCase().contains('à®ªà®°à®¾à®®à¤°à®¿à®ªà¯à®ªà¯') || label.toLowerCase().contains('à°¸à°‚à°°à°•à±à°·à°£')) {
       return loc.smartPlantCareGuidance;
-    } else if (label.toLowerCase().contains('tips') || label.toLowerCase().contains('टिप्स') ||
-               label.toLowerCase().contains('குறிப்புகள்') || label.toLowerCase().contains('చిట్కాలు')) {
+    } else if (label.toLowerCase().contains('tips') || label.toLowerCase().contains('à¤Ÿà¤¿à¤ªà¥à¤¸') ||
+               label.toLowerCase().contains('à®•à¯à®±à®¿à®ªà¯à®ªà¯à®•à®³à¯') || label.toLowerCase().contains('à°šà°¿à°Ÿà±à°•à°¾à°²à±')) {
       return loc.sustainableFarmingPractices;
-    } else if (label.toLowerCase().contains('rover') || label.toLowerCase().contains('रोवर') ||
-               label.toLowerCase().contains('ரோவர்') || label.toLowerCase().contains('రోవర్')) {
+    } else if (label.toLowerCase().contains('rover') || label.toLowerCase().contains('à¤°à¥‹à¤µà¤°') ||
+               label.toLowerCase().contains('à®°à¯‹à®µà®°à¯') || label.toLowerCase().contains('à°°à±‹à°µà°°à±')) {
       return loc.controlSmartRovers;
     }
     return loc.aiPoweredFarmingAssistant;
@@ -506,7 +501,6 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       drawer: const Drawer(child: MenuPage()),
-      floatingActionButton: const VoiceAssistantWidget(),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(

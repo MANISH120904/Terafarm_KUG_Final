@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'location.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/weather_provider.dart';
+import 'services/live_weather_service.dart';
 import 'test_notification_page.dart';
 
 class WeatherPage extends StatefulWidget {
@@ -34,37 +33,26 @@ class _WeatherPageState extends State<WeatherPage> with SingleTickerProviderStat
 
   Future<void> _fetchWeather() async {
     try {
-      final pos = LocationService().currentPosition;
-      String query;
-      if (pos != null) {
-        query = '${pos.latitude},${pos.longitude}';
-      } else {
+      var pos = LocationService().currentPosition;
+      if (pos == null) {
         await LocationService().determinePosition();
-        final newPos = LocationService().currentPosition;
-        query = '${newPos?.latitude},${newPos?.longitude}';
+        pos = LocationService().currentPosition;
       }
-      final key = '994SBTQFYTXZJPS5YLZP5FWGW';
-      final uri = Uri.https(
-        'weather.visualcrossing.com',
-        '/VisualCrossingWebServices/rest/services/timeline/$query',
-        {
-          'unitGroup': 'metric',
-          'include': 'current',
-          'key': key,
-          'contentType': 'json',
-        },
+      if (pos == null) throw Exception('Could not determine location');
+
+      final weather = await LiveWeatherService.byCoordinates(
+        lat: pos.latitude,
+        lon: pos.longitude,
       );
-      final res = await http.get(uri);
-      final data = json.decode(res.body) as Map<String, dynamic>;
-      final curr = data['currentConditions'] as Map<String, dynamic>;
+      if (!mounted) return;
       setState(() {
-        _temperature = (curr['temp'] as num).toDouble();
-        _humidity = (curr['humidity'] as num).toInt();
-        _condition = curr['conditions'] as String;
+        _temperature = weather.temperatureC;
+        _humidity = weather.humidity;
+        _condition = weather.condition;
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

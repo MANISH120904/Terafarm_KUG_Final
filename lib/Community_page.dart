@@ -1,4 +1,4 @@
-import 'package:latlong2/latlong.dart' as latLong;
+﻿import 'package:latlong2/latlong.dart' as latLong;
 import 'address_map_picker.dart';
 import 'location.dart';
 
@@ -12,10 +12,9 @@ import 'forum_page.dart';
 import 'leaderboard_page.dart';
 
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
 import 'services/navigation_service.dart';
-import 'voice_assistance.dart';
-
 class CommunityPage extends StatefulWidget {
   const CommunityPage({Key? key}) : super(key: key);
   @override
@@ -33,12 +32,7 @@ class _CommunityPageState extends State<CommunityPage> with TickerProviderStateM
   void initState() {
     super.initState();
     // Initialize language options for dropdown
-    _languages = [
-      {'name': 'English', 'locale': const Locale('en')},
-      {'name': 'हिन्दी', 'locale': const Locale('hi')},
-      {'name': 'தமிழ்', 'locale': const Locale('ta')},
-      {'name': 'తెలుగు', 'locale': const Locale('te')},
-    ];
+    _languages = List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
     
     // Initialize shimmer animation
     _shimmerController = AnimationController(
@@ -192,14 +186,14 @@ class _CommunityPageState extends State<CommunityPage> with TickerProviderStateM
     // Define colors to match each page's actual theme
     Color buttonColor = const Color(0xFF16A34A); // Default green
     
-    if (label.toLowerCase().contains('collaborate') || label.toLowerCase().contains('सहयोग') || 
-        label.toLowerCase().contains('ஒத்துழைப்பு') || label.toLowerCase().contains('సహకారం')) {
+    if (label.toLowerCase().contains('collaborate') || label.toLowerCase().contains('à¤¸à¤¹à¤¯à¥‹à¤—') || 
+        label.toLowerCase().contains('à®’à®¤à¯à®¤à¯à®´à¯ˆà®ªà¯à®ªà¯') || label.toLowerCase().contains('à°¸à°¹à°•à°¾à°°à°‚')) {
       buttonColor = const Color(0xFF246B40); // Dark green matching ColaPage
-    } else if (label.toLowerCase().contains('forum') || label.toLowerCase().contains('मंच') ||
-               label.toLowerCase().contains('மன்றம்') || label.toLowerCase().contains('వేదిక')) {
+    } else if (label.toLowerCase().contains('forum') || label.toLowerCase().contains('à¤®à¤‚à¤š') ||
+               label.toLowerCase().contains('à®®à®©à¯à®±à®®à¯') || label.toLowerCase().contains('à°µà±‡à°¦à°¿à°•')) {
       buttonColor = const Color(0xFF246B40); // Dark green matching ForumPage
-    } else if (label.toLowerCase().contains('leaderboard') || label.toLowerCase().contains('लीडरबोर्ड') ||
-               label.toLowerCase().contains('தலைவர் பலகை') || label.toLowerCase().contains('లీడర్‌బోర్డ్')) {
+    } else if (label.toLowerCase().contains('leaderboard') || label.toLowerCase().contains('à¤²à¥€à¤¡à¤°à¤¬à¥‹à¤°à¥à¤¡') ||
+               label.toLowerCase().contains('à®¤à®²à¯ˆà®µà®°à¯ à®ªà®²à®•à¯ˆ') || label.toLowerCase().contains('à°²à±€à°¡à°°à±â€Œà°¬à±‹à°°à±à°¡à±')) {
       buttonColor = const Color(0xFF407944); // Dark green matching marketplace features
     }
     
@@ -379,14 +373,14 @@ class _CommunityPageState extends State<CommunityPage> with TickerProviderStateM
   }
 
   IconData _getCommunityIcon(String label) {
-    if (label.toLowerCase().contains('collaborate') || label.toLowerCase().contains('सहयोग') || 
-        label.toLowerCase().contains('ஒத்துழைப்பு') || label.toLowerCase().contains('సహకారం')) {
+    if (label.toLowerCase().contains('collaborate') || label.toLowerCase().contains('à¤¸à¤¹à¤¯à¥‹à¤—') || 
+        label.toLowerCase().contains('à®’à®¤à¯à®¤à¯à®´à¯ˆà®ªà¯à®ªà¯') || label.toLowerCase().contains('à°¸à°¹à°•à°¾à°°à°‚')) {
       return Icons.handshake_outlined;
-    } else if (label.toLowerCase().contains('forum') || label.toLowerCase().contains('मंच') ||
-               label.toLowerCase().contains('மன்றம்') || label.toLowerCase().contains('వేదిక')) {
+    } else if (label.toLowerCase().contains('forum') || label.toLowerCase().contains('à¤®à¤‚à¤š') ||
+               label.toLowerCase().contains('à®®à®©à¯à®±à®®à¯') || label.toLowerCase().contains('à°µà±‡à°¦à°¿à°•')) {
       return Icons.forum_outlined;
-    } else if (label.toLowerCase().contains('leaderboard') || label.toLowerCase().contains('लीडरबोर्ड') ||
-               label.toLowerCase().contains('தலைவர் பலகை') || label.toLowerCase().contains('లీడర్‌బోర్డ్')) {
+    } else if (label.toLowerCase().contains('leaderboard') || label.toLowerCase().contains('à¤²à¥€à¤¡à¤°à¤¬à¥‹à¤°à¥à¤¡') ||
+               label.toLowerCase().contains('à®¤à®²à¯ˆà®µà®°à¯ à®ªà®²à®•à¯ˆ') || label.toLowerCase().contains('à°²à±€à°¡à°°à±â€Œà°¬à±‹à°°à±à°¡à±')) {
       return Icons.leaderboard_outlined;
     }
     return Icons.people_outline;
@@ -399,7 +393,6 @@ class _CommunityPageState extends State<CommunityPage> with TickerProviderStateM
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      floatingActionButton: const VoiceAssistantWidget(),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(

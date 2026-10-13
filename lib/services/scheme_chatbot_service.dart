@@ -781,10 +781,10 @@ Write everything as natural, flowing paragraphs!
       (match) => '₹${match.group(1)}',
     );
     
-    // Clean up URLs
+    // Keep URLs clickable — label + original link (do not strip the URL)
     friendlyResponse = friendlyResponse.replaceAllMapped(
-      RegExp(r'https?://[^\s]+'),
-      (match) => '🔗 Apply Online',
+      RegExp(r'https?://[^\s\]\*\)]+'),
+      (match) => '🔗 Apply Online: ${match.group(0)}',
     );
     
     // Format phone numbers nicely

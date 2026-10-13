@@ -40,7 +40,10 @@ class LocationService {
 
     // At this point, permissions are granted and we can fetch location.
     currentPosition = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        timeLimit: Duration(seconds: 12),
+      ),
     );
 
     // Fetch a human-readable address using OpenRouteService.

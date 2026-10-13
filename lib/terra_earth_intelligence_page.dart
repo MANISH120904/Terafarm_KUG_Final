@@ -1,6 +1,8 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmap;
+import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -24,8 +26,8 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
   String _selectedAnalysis = 'carbon';
   
   // Google Maps visualization
-  Set<Marker> _markers = {};
-  Set<Polygon> _polygons = {};
+  Set<gmap.Marker> _markers = {};
+  Set<gmap.Polygon> _polygons = {};
   
   // Farm mapping data
   List<LatLng> _farmBoundaryPoints = [];
@@ -539,25 +541,27 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
   void _updateMapMarkers() {
     _markers.clear();
     _polygons.clear();
-    
-    // Add boundary markers
+    // Kept for compatibility â€” map UI uses OSM (flutter_map), not Google Maps.
     for (int i = 0; i < _farmBoundaryPoints.length; i++) {
+      final p = _farmBoundaryPoints[i];
       _markers.add(
-        Marker(
-          markerId: MarkerId('boundary_$i'),
-          position: _farmBoundaryPoints[i],
-          infoWindow: InfoWindow(title: 'Boundary Point ${i + 1}'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        gmap.Marker(
+          markerId: gmap.MarkerId('boundary_$i'),
+          position: gmap.LatLng(p.latitude, p.longitude),
+          infoWindow: gmap.InfoWindow(title: 'Boundary Point ${i + 1}'),
+          icon: gmap.BitmapDescriptor.defaultMarkerWithHue(
+            gmap.BitmapDescriptor.hueGreen,
+          ),
         ),
       );
     }
-    
-    // Add farm polygon
     if (_farmBoundaryPoints.length >= 3) {
       _polygons.add(
-        Polygon(
-          polygonId: const PolygonId('farm_boundary'),
-          points: _farmBoundaryPoints,
+        gmap.Polygon(
+          polygonId: const gmap.PolygonId('farm_boundary'),
+          points: _farmBoundaryPoints
+              .map((p) => gmap.LatLng(p.latitude, p.longitude))
+              .toList(),
           strokeColor: Colors.green,
           strokeWidth: 3,
           fillColor: Colors.green.withOpacity(0.2),
@@ -606,7 +610,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
     
     area = area.abs() * earthRadiusKm * earthRadiusKm / 2;
     
-    // Convert from square kilometers to hectares (1 km² = 100 hectares)
+    // Convert from square kilometers to hectares (1 kmÂ² = 100 hectares)
     return area * 100;
   }
 
@@ -736,10 +740,10 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
     return [
       {
         'title': 'Precision Carbon Farming for $_farmName',
-        'description': 'Scientific analysis shows your ${_farmArea.toStringAsFixed(2)} hectare $_cropType farm can sequester ${totalCarbonPotential.toStringAsFixed(1)} tons CO₂ annually through optimized practices',
+        'description': 'Scientific analysis shows your ${_farmArea.toStringAsFixed(2)} hectare $_cropType farm can sequester ${totalCarbonPotential.toStringAsFixed(1)} tons COâ‚‚ annually through optimized practices',
         'impact': 'High',
         'action': 'Plant $optimalTrees native trees in strategic locations and implement cover cropping',
-        'benefit': 'Generate ₹${carbonCreditsValue.toStringAsFixed(0)} annually from verified carbon credits',
+        'benefit': 'Generate â‚¹${carbonCreditsValue.toStringAsFixed(0)} annually from verified carbon credits',
         'co2Reduction': totalCarbonPotential,
         'icon': Icons.eco,
         'color': Colors.green,
@@ -752,7 +756,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Legume-based cover crops optimized for your soil type and climate zone',
         'impact': 'Medium',
         'action': 'Plant nitrogen-fixing crops: ${_getOptimalCoverCrops()} during off-season',
-        'benefit': 'Increase soil organic carbon by 0.3-0.5% and save ₹${(_farmArea * 12000).toStringAsFixed(0)} on fertilizers',
+        'benefit': 'Increase soil organic carbon by 0.3-0.5% and save â‚¹${(_farmArea * 12000).toStringAsFixed(0)} on fertilizers',
         'co2Reduction': _farmArea * 2.8,
         'icon': Icons.grass,
         'color': Colors.brown,
@@ -765,7 +769,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'GPS-guided equipment and variable rate technology reduce emissions by 25-35%',
         'impact': 'High',
         'action': 'Implement precision fertilizer application and optimized tillage patterns',
-        'benefit': 'Reduce input costs by ₹${(_farmArea * 8500).toStringAsFixed(0)} while cutting emissions',
+        'benefit': 'Reduce input costs by â‚¹${(_farmArea * 8500).toStringAsFixed(0)} while cutting emissions',
         'co2Reduction': _farmArea * 1.9,
         'icon': Icons.precision_manufacturing,
         'color': Colors.blue,
@@ -818,8 +822,8 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
   }
 
   double _getCarbonCreditPrice() {
-    // Current verified carbon credit prices in India (₹ per ton CO₂)
-    return 1800 + Random().nextDouble() * 400; // ₹1800-2200 per ton
+    // Current verified carbon credit prices in India (â‚¹ per ton COâ‚‚)
+    return 1800 + Random().nextDouble() * 400; // â‚¹1800-2200 per ton
   }
 
   String _getOptimalCoverCrops() {
@@ -849,7 +853,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Scientific habitat modeling shows ${optimalPollinatorArea.toStringAsFixed(2)} hectares of native wildflower corridors will boost $_cropType yield by 28-35%',
         'impact': 'High',
         'action': 'Plant native species: ${_getNativePollinatorPlants()} in strategic 3-meter wide strips',
-        'benefit': 'Increase crop yield worth ₹${_calculatePollinatorYieldValue().toStringAsFixed(0)} annually',
+        'benefit': 'Increase crop yield worth â‚¹${_calculatePollinatorYieldValue().toStringAsFixed(0)} annually',
         'biodiversityBoost': 0.42,
         'icon': Icons.local_florist,
         'color': Colors.orange,
@@ -859,10 +863,10 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
       },
       {
         'title': 'Avian Pest Control Network',
-        'description': 'Habitat analysis indicates potential for $expectedBirdSpecies bird species providing ₹${pestControlValue.toStringAsFixed(0)} worth of natural pest control',
+        'description': 'Habitat analysis indicates potential for $expectedBirdSpecies bird species providing â‚¹${pestControlValue.toStringAsFixed(0)} worth of natural pest control',
         'impact': 'High',
         'action': 'Install ${_calculateOptimalNestBoxes()} nest boxes and maintain 2 water points per hectare',
-        'benefit': 'Reduce pesticide costs by 65-75%, saving ₹${(_farmArea * 4200).toStringAsFixed(0)}',
+        'benefit': 'Reduce pesticide costs by 65-75%, saving â‚¹${(_farmArea * 4200).toStringAsFixed(0)}',
         'biodiversityBoost': 0.38,
         'icon': Icons.pets,
         'color': Colors.teal,
@@ -875,7 +879,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Micro-habitat creation for beneficial insects optimized for $_cropType pest management',
         'impact': 'High',
         'action': 'Establish ${_getBeneficialInsectPlants()} and maintain undisturbed refugia areas',
-        'benefit': 'Achieve 70-80% natural pest suppression, worth ₹${(_farmArea * 5800).toStringAsFixed(0)}',
+        'benefit': 'Achieve 70-80% natural pest suppression, worth â‚¹${(_farmArea * 5800).toStringAsFixed(0)}',
         'biodiversityBoost': 0.45,
         'icon': Icons.bug_report,
         'color': Colors.purple,
@@ -988,7 +992,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Soil analysis indicates ${currentOrganicMatter.toStringAsFixed(1)}% organic matter. Targeting ${targetOrganicMatter.toStringAsFixed(1)}% for optimal $_cropType production',
         'impact': 'High',
         'action': 'Apply ${_getOptimalCompostAmount()} tons of verified compost + biochar blend per hectare',
-        'benefit': 'Increase yield by ${yieldIncreaseKg.toStringAsFixed(0)}kg worth ₹${_calculateSoilImprovementValue().toStringAsFixed(0)}',
+        'benefit': 'Increase yield by ${yieldIncreaseKg.toStringAsFixed(0)}kg worth â‚¹${_calculateSoilImprovementValue().toStringAsFixed(0)}',
         'soilImprovement': 0.52,
         'icon': Icons.agriculture,
         'color': Colors.brown,
@@ -1001,7 +1005,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'No-till system reduces soil compaction and increases water infiltration by 40-60% on your farm',
         'impact': 'High',
         'action': 'Implement strip-tillage with cover crop integration and controlled traffic patterns',
-        'benefit': 'Save ₹${soilErosionSavings.toStringAsFixed(0)} from reduced erosion + ₹${(_farmArea * 7200).toStringAsFixed(0)} operational costs',
+        'benefit': 'Save â‚¹${soilErosionSavings.toStringAsFixed(0)} from reduced erosion + â‚¹${(_farmArea * 7200).toStringAsFixed(0)} operational costs',
         'soilImprovement': 0.39,
         'icon': Icons.eco,
         'color': Colors.green,
@@ -1014,7 +1018,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Site-specific fertilizer recommendations based on soil testing and crop requirements',
         'impact': 'High',
         'action': 'Apply variable-rate NPK: ${_getOptimalNPKRatio()} based on grid soil sampling',
-        'benefit': 'Optimize fertilizer efficiency, save ₹${(_farmArea * 6800).toStringAsFixed(0)} while boosting yield 12-18%',
+        'benefit': 'Optimize fertilizer efficiency, save â‚¹${(_farmArea * 6800).toStringAsFixed(0)} while boosting yield 12-18%',
         'soilImprovement': 0.44,
         'icon': Icons.science,
         'color': Colors.indigo,
@@ -1077,7 +1081,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
   double _calculateErosionPreventionValue() {
     // Economic value of preventing soil erosion
     double erosionRate = _farmArea * 2.5; // tons/hectare/year typical loss
-    double soilValue = 1500; // ₹ per ton of fertile soil
+    double soilValue = 1500; // â‚¹ per ton of fertile soil
     return erosionRate * soilValue * 0.7; // 70% erosion prevention
   }
 
@@ -1142,7 +1146,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Water requirement analysis: ${dailyWaterNeed.toStringAsFixed(0)} liters/day. Current efficiency: ${(currentEfficiency * 100).toStringAsFixed(1)}%',
         'impact': 'High',
         'action': 'Install ${_getOptimalIrrigationType()} with soil moisture sensors and weather integration',
-        'benefit': 'Save ${waterSavingsPotential.toStringAsFixed(0)} liters daily, worth ₹${_calculateWaterSavingsValue().toStringAsFixed(0)}',
+        'benefit': 'Save ${waterSavingsPotential.toStringAsFixed(0)} liters daily, worth â‚¹${_calculateWaterSavingsValue().toStringAsFixed(0)}',
         'waterSavings': 0.47,
         'icon': Icons.water_drop,
         'color': Colors.blue,
@@ -1155,7 +1159,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Catchment analysis shows potential to harvest ${rainwaterPotential.toStringAsFixed(0)} liters annually',
         'impact': 'High',
         'action': 'Construct ${_getOptimalPondSize()} farm pond with filtration and ${_getOptimalChannelLength()} collection channels',
-        'benefit': 'Achieve water independence + save ₹${(_farmArea * 15000).toStringAsFixed(0)} on irrigation costs',
+        'benefit': 'Achieve water independence + save â‚¹${(_farmArea * 15000).toStringAsFixed(0)} on irrigation costs',
         'waterSavings': 0.38,
         'icon': Icons.water,
         'color': Colors.cyan,
@@ -1168,7 +1172,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Drought-resistant varieties and mulching reduce water needs by 30-35%',
         'impact': 'High',
         'action': 'Adopt ${_getDroughtResistantVarieties()} + organic mulching system',
-        'benefit': 'Maintain 95% yield with 35% less water, save ₹${(_farmArea * 8500).toStringAsFixed(0)}',
+        'benefit': 'Maintain 95% yield with 35% less water, save â‚¹${(_farmArea * 8500).toStringAsFixed(0)}',
         'waterSavings': 0.33,
         'icon': Icons.local_florist,
         'color': Colors.amber,
@@ -1200,7 +1204,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
   double _calculateRainwaterHarvestingPotential() {
     // Based on regional rainfall and catchment area
     double annualRainfall = 800 + Random().nextDouble() * 400; // 800-1200mm typical
-    double catchmentArea = _farmArea * 10000; // m²
+    double catchmentArea = _farmArea * 10000; // mÂ²
     double collectionEfficiency = 0.75; // 75% collection efficiency
     
     return annualRainfall * catchmentArea * collectionEfficiency / 1000; // liters
@@ -1238,9 +1242,9 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
   }
 
   String _getOptimalPondSize() {
-    if (_farmArea < 1.0) return '50 m³';
-    if (_farmArea < 3.0) return '${(_farmArea * 50).round()} m³';
-    return '${(_farmArea * 40).round()} m³';
+    if (_farmArea < 1.0) return '50 mÂ³';
+    if (_farmArea < 3.0) return '${(_farmArea * 50).round()} mÂ³';
+    return '${(_farmArea * 40).round()} mÂ³';
   }
 
   String _getOptimalChannelLength() {
@@ -1264,7 +1268,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
 
   double _calculateWaterSavingsValue() {
     // Economic value of water savings
-    double waterCostPerLiter = 0.03; // ₹0.03 per liter average
+    double waterCostPerLiter = 0.03; // â‚¹0.03 per liter average
     double dailySavings = _calculateAccurateWaterNeeds() * 0.45;
     return dailySavings * waterCostPerLiter * 365; // Annual savings
   }
@@ -1981,7 +1985,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
                   SizedBox(
                     width: 120,
                     child: _buildMetricCard(
-                      'CO₂ Saved',
+                      'COâ‚‚ Saved',
                       '${totalCarbonReduction.toStringAsFixed(1)}t/yr',
                       Icons.eco,
                       Colors.green,
@@ -2398,7 +2402,7 @@ class DataStreamPainter extends CustomPainter {
   bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
 
-// Farm Boundary Map Selection Page
+// Farm Boundary Map Selection Page — OSM (no Google Maps API key required)
 class FarmBoundaryMapPage extends StatefulWidget {
   final LatLng initialLocation;
   final String farmName;
@@ -2412,13 +2416,11 @@ class FarmBoundaryMapPage extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _FarmBoundaryMapPageState createState() => _FarmBoundaryMapPageState();
+  State<FarmBoundaryMapPage> createState() => _FarmBoundaryMapPageState();
 }
 
 class _FarmBoundaryMapPageState extends State<FarmBoundaryMapPage> {
-  Set<Marker> _markers = {};
-  Set<Polygon> _polygons = {};
-  List<LatLng> _boundaryPoints = [];
+  final List<LatLng> _boundaryPoints = [];
 
   @override
   Widget build(BuildContext context) {
@@ -2429,33 +2431,55 @@ class _FarmBoundaryMapPageState extends State<FarmBoundaryMapPage> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: Icon(Icons.help_outline),
+            icon: const Icon(Icons.help_outline),
             onPressed: _showInstructions,
           ),
         ],
       ),
       body: Stack(
         children: [
-          // Google Map with Satellite View
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: widget.initialLocation,
-              zoom: 18.0,
+          FlutterMap(
+            options: MapOptions(
+              initialCenter: widget.initialLocation,
+              initialZoom: 17,
+              maxZoom: 19,
+              minZoom: 4,
+              onTap: (_, point) => _onMapTapped(point),
             ),
-            mapType: MapType.satellite,
-            markers: _markers,
-            polygons: _polygons,
-            onMapCreated: (GoogleMapController controller) {
-              // Map controller ready
-            },
-            onTap: _onMapTapped,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            compassEnabled: true,
-            mapToolbarEnabled: false,
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.terafarm2',
+                maxNativeZoom: 19,
+              ),
+              if (_boundaryPoints.length >= 3)
+                PolygonLayer(
+                  polygons: [
+                    Polygon(
+                      points: List<LatLng>.from(_boundaryPoints),
+                      color: Colors.green.withOpacity(0.25),
+                      borderColor: Colors.green,
+                      borderStrokeWidth: 3,
+                    ),
+                  ],
+                ),
+              MarkerLayer(
+                markers: [
+                  for (int i = 0; i < _boundaryPoints.length; i++)
+                    Marker(
+                      point: _boundaryPoints[i],
+                      width: 36,
+                      height: 36,
+                      child: Icon(
+                        Icons.location_on,
+                        color: i == 0 ? Colors.green : Colors.blue,
+                        size: 36,
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
-          
-          // Instructions overlay
           Positioned(
             top: 16,
             left: 16,
@@ -2469,21 +2493,21 @@ class _FarmBoundaryMapPageState extends State<FarmBoundaryMapPage> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.touch_app, color: Colors.white, size: 20),
-                        SizedBox(width: 8),
+                        const Icon(Icons.touch_app, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _boundaryPoints.isEmpty
                                 ? 'Tap on the map to mark your farm corners'
                                 : 'Points marked: ${_boundaryPoints.length}/8',
-                            style: TextStyle(color: Colors.white, fontSize: 14),
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
                           ),
                         ),
                       ],
                     ),
                     if (_boundaryPoints.isNotEmpty) ...[
-                      SizedBox(height: 8),
-                      Text(
+                      const SizedBox(height: 8),
+                      const Text(
                         'Need at least 3 points. Tap "Complete Farm Shape" when done.',
                         style: TextStyle(color: Colors.yellow, fontSize: 12),
                         textAlign: TextAlign.center,
@@ -2494,8 +2518,6 @@ class _FarmBoundaryMapPageState extends State<FarmBoundaryMapPage> {
               ),
             ),
           ),
-          
-          // Control buttons
           Positioned(
             bottom: 16,
             left: 16,
@@ -2505,33 +2527,34 @@ class _FarmBoundaryMapPageState extends State<FarmBoundaryMapPage> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _boundaryPoints.isEmpty ? null : _undoLastPoint,
-                    icon: Icon(Icons.undo),
-                    label: Text('Undo Last'),
+                    icon: const Icon(Icons.undo),
+                    label: const Text('Undo'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
                     ),
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _boundaryPoints.length < 3 ? null : _clearAllPoints,
-                    icon: Icon(Icons.clear),
-                    label: Text('Clear All'),
+                    icon: const Icon(Icons.clear),
+                    label: const Text('Clear'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
                     ),
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   flex: 2,
                   child: ElevatedButton.icon(
-                    onPressed: _boundaryPoints.length < 3 ? null : _completeFarmShape,
-                    icon: Icon(Icons.check_circle),
-                    label: Text('Complete Farm Shape'),
+                    onPressed:
+                        _boundaryPoints.length < 3 ? null : _completeFarmShape,
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('Complete'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
@@ -2549,100 +2572,40 @@ class _FarmBoundaryMapPageState extends State<FarmBoundaryMapPage> {
   void _onMapTapped(LatLng point) {
     if (_boundaryPoints.length >= 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Maximum 8 boundary points allowed'),
           backgroundColor: Colors.orange,
         ),
       );
       return;
     }
-
-    setState(() {
-      _boundaryPoints.add(point);
-      _updateMapDisplay();
-    });
-
-    // Haptic feedback
-    // HapticFeedback.lightImpact();
-  }
-
-  void _updateMapDisplay() {
-    _markers.clear();
-    _polygons.clear();
-
-    // Add markers for each boundary point
-    for (int i = 0; i < _boundaryPoints.length; i++) {
-      _markers.add(
-        Marker(
-          markerId: MarkerId('boundary_$i'),
-          position: _boundaryPoints[i],
-          infoWindow: InfoWindow(
-            title: 'Corner ${i + 1}',
-            snippet: 'Farm boundary point',
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            i == 0 ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueBlue,
-          ),
-        ),
-      );
-    }
-
-    // Show polygon if we have at least 3 points
-    if (_boundaryPoints.length >= 3) {
-      _polygons.add(
-        Polygon(
-          polygonId: PolygonId('farm_preview'),
-          points: _boundaryPoints,
-          strokeColor: Colors.green,
-          strokeWidth: 3,
-          fillColor: Colors.green.withOpacity(0.2),
-        ),
-      );
-    }
+    setState(() => _boundaryPoints.add(point));
   }
 
   void _undoLastPoint() {
-    if (_boundaryPoints.isNotEmpty) {
-      setState(() {
-        _boundaryPoints.removeLast();
-        _updateMapDisplay();
-      });
-    }
+    if (_boundaryPoints.isEmpty) return;
+    setState(() => _boundaryPoints.removeLast());
   }
 
   void _clearAllPoints() {
-    setState(() {
-      _boundaryPoints.clear();
-      _updateMapDisplay();
-    });
+    setState(() => _boundaryPoints.clear());
   }
 
   void _completeFarmShape() {
-    if (_boundaryPoints.length < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please mark at least 3 boundary points'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    // Calculate area for confirmation
-    double area = _calculatePolygonArea(_boundaryPoints);
-    
+    if (_boundaryPoints.length < 3) return;
+    final area = _calculatePolygonArea(_boundaryPoints);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirm Farm Boundaries'),
+        title: const Text('Confirm Farm Boundaries'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Farm: ${widget.farmName}'),
             Text('Boundary Points: ${_boundaryPoints.length}'),
             Text('Estimated Area: ${area.toStringAsFixed(2)} hectares'),
-            SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'Are these boundaries correct for your farm?',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
@@ -2651,16 +2614,16 @@ class _FarmBoundaryMapPageState extends State<FarmBoundaryMapPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Edit More'),
+            child: const Text('Edit More'),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Close dialog
-              widget.onBoundarySelected(_boundaryPoints);
-              Navigator.pop(context); // Close map page
+              Navigator.pop(context);
+              widget.onBoundarySelected(List<LatLng>.from(_boundaryPoints));
+              Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: Text('Confirm Boundaries'),
+            child: const Text('Confirm Boundaries'),
           ),
         ],
       ),
@@ -2669,38 +2632,30 @@ class _FarmBoundaryMapPageState extends State<FarmBoundaryMapPage> {
 
   double _calculatePolygonArea(List<LatLng> points) {
     if (points.length < 3) return 0.0;
-    
-    // Use the same high-precision calculation as the main class
     const double earthRadiusKm = 6371.0;
-    
-    // Convert coordinates to radians
-    List<Map<String, double>> coords = points.map((point) => {
-      'lat': point.latitude * pi / 180,
-      'lng': point.longitude * pi / 180,
-    }).toList();
-    
-    // Calculate area using spherical excess formula
+    final coords = points
+        .map((point) => {
+              'lat': point.latitude * pi / 180,
+              'lng': point.longitude * pi / 180,
+            })
+        .toList();
     double area = 0.0;
-    int n = coords.length;
-    
+    final n = coords.length;
     for (int i = 0; i < n; i++) {
-      int j = (i + 1) % n;
-      
-      double lat1 = coords[i]['lat']!;
-      double lng1 = coords[i]['lng']!;
-      double lat2 = coords[j]['lat']!;
-      double lng2 = coords[j]['lng']!;
-      
-      // Spherical triangle area calculation
-      double deltaLng = lng2 - lng1;
-      double E = 2 * atan2(tan(deltaLng / 2) * (sin(lat1) + sin(lat2)), 
-                          2 + sin(lat1) + sin(lat2));
-      area += E;
+      final j = (i + 1) % n;
+      final lat1 = coords[i]['lat']!;
+      final lng1 = coords[i]['lng']!;
+      final lat2 = coords[j]['lat']!;
+      final lng2 = coords[j]['lng']!;
+      final deltaLng = lng2 - lng1;
+      final e = 2 *
+          atan2(
+            tan(deltaLng / 2) * (sin(lat1) + sin(lat2)),
+            2 + sin(lat1) + sin(lat2),
+          );
+      area += e;
     }
-    
     area = area.abs() * earthRadiusKm * earthRadiusKm / 2;
-    
-    // Convert from square kilometers to hectares
     return area * 100;
   }
 
@@ -2708,84 +2663,27 @@ class _FarmBoundaryMapPageState extends State<FarmBoundaryMapPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.help, color: Colors.blue),
             SizedBox(width: 8),
             Text('How to Mark Farm Boundaries'),
           ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildInstructionStep('1', 'Use satellite view to see your farm clearly'),
-              _buildInstructionStep('2', 'Tap on each corner of your farm boundary'),
-              _buildInstructionStep('3', 'Mark at least 3 points, maximum 8 points'),
-              _buildInstructionStep('4', 'First point is green, others are blue'),
-              _buildInstructionStep('5', 'Use Undo to remove the last point'),
-              _buildInstructionStep('6', 'Use Clear All to start over'),
-              _buildInstructionStep('7', 'Tap Complete when you finish marking'),
-              SizedBox(height: 12),
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Tip: Zoom in for more accurate boundary marking. The satellite view shows the actual layout of your farm.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.blue.shade700,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
+        content: const SingleChildScrollView(
+          child: Text(
+            '1. Tap each corner of your farm on the map\n'
+            '2. Mark at least 3 points (max 8)\n'
+            '3. First point is green, others are blue\n'
+            '4. Use Undo / Clear as needed\n'
+            '5. Tap Complete when finished\n\n'
+            'Tip: Zoom in for more accurate marking.',
           ),
         ),
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Got it'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInstructionStep(String number, String instruction) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: Colors.green,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              instruction,
-              style: TextStyle(fontSize: 14),
-            ),
+            child: const Text('Got it'),
           ),
         ],
       ),

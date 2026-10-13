@@ -1,13 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // for currentUser
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart'; // New import for geolocation
 import 'address_map_picker.dart'; // Import your location picker widget
-import 'voice_assistance.dart';
+import 'services/farm_image_upload_service.dart';
 
 class ListFarmPage extends StatefulWidget {
   const ListFarmPage({super.key});
@@ -118,7 +117,10 @@ class _ListFarmPageState extends State<ListFarmPage> {
     }
 
     final Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        timeLimit: Duration(seconds: 12),
+      ),
     );
     return LatLng(position.latitude, position.longitude);
   }
@@ -127,22 +129,23 @@ class _ListFarmPageState extends State<ListFarmPage> {
   Future<void> _openMapPicker() async {
     LatLng initialLocation;
     try {
-      // Automatically fetch the current location.
       initialLocation = await _getCurrentLocation();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Could not fetch current location: $e")),
-      );
-      // Fall back to default location (San Francisco)
-      initialLocation = LatLng(37.7749, -122.4194);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Could not fetch current location: $e")),
+        );
+      }
+      // Fall back to Hyderabad (India default)
+      initialLocation = const LatLng(17.3850, 78.4867);
     }
 
-    // Open a modal bottom sheet with your AddressMapPicker widget.
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled:
-          true, // allows the bottom sheet to be full screen if needed
-      builder: (context) => AddressMapPicker(initialLocation: initialLocation),
+    if (!mounted) return;
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddressMapPicker(initialLocation: initialLocation),
+      ),
     );
 
     if (result != null) {
@@ -161,23 +164,26 @@ class _ListFarmPageState extends State<ListFarmPage> {
     setState(() => _isUploading = true);
 
     String imageUrl = "";
+    String? imageProvider;
     if (_selectedImage != null) {
-      try {
-        final fileName = DateTime.now().millisecondsSinceEpoch.toString();
-        final storageRef = FirebaseStorage.instance.ref(
-          "farm_images/$fileName.jpg",
-        );
-        imageUrl =
-            await (await storageRef.putFile(
-              _selectedImage!,
-            )).ref.getDownloadURL();
-      } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error uploading image: $e")));
+      final upload = await FarmImageUploadService.upload(_selectedImage!);
+      if (!upload.success || upload.url.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Could not upload photo. Check internet and try again.',
+              ),
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
         setState(() => _isUploading = false);
         return;
       }
+      imageUrl = upload.url;
+      imageProvider = upload.provider;
     }
 
     final productData =
@@ -201,6 +207,7 @@ class _ListFarmPageState extends State<ListFarmPage> {
         'scale': _scaleOption,
         'products': productData,
         'imageUrl': imageUrl,
+        if (imageProvider != null) 'imageProvider': imageProvider,
         'sellerId': FirebaseAuth.instance.currentUser!.uid,
         'timestamp': FieldValue.serverTimestamp(),
         // Optionally, store the selected coordinates.
@@ -208,16 +215,28 @@ class _ListFarmPageState extends State<ListFarmPage> {
         'longitude': _selectedLng,
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Farm created successfully!")));
+      if (mounted) {
+        final photoNote = imageUrl.isNotEmpty ? ' with photo' : '';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Farm listed$photoNote successfully'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
       _formKey.currentState!.reset();
       _products.clear();
       _addProductField();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error saving farm details: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not save farm. Please try again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
 
     setState(() => _isUploading = false);
@@ -388,7 +407,6 @@ class _ListFarmPageState extends State<ListFarmPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      floatingActionButton: const VoiceAssistantWidget(),
       appBar: AppBar(
         title: const Text(
           "List a Farm",

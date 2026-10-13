@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'weather_notification_service.dart';
@@ -25,43 +27,43 @@ class NotificationManager {
     }
 
     try {
-      // Ensure Firebase is initialized
-      await Firebase.initializeApp();
-      
-      // Initialize weather notification service
+      // Firebase should already be initialized in main(); don't block here.
+      if (Firebase.apps.isEmpty) {
+        debugPrint('Skipping NotificationManager — Firebase not ready');
+        return;
+      }
+
       debugPrint('Initializing Weather Notification Service...');
       await _weatherService.initialize();
-      
-      // Initialize FCM notification handler
+
       debugPrint('Initializing FCM Notification Handler...');
       await _fcmHandler.initialize();
-      
-      // Subscribe to weather topics
+
       debugPrint('Subscribing to weather topics...');
       await _fcmHandler.subscribeToWeatherTopics();
-      
-      // Subscribe to location-specific topics
-      final position = await _weatherService.getCurrentLocation();
-      if (position != null) {
-        await _fcmHandler.subscribeToLocationTopic(
-          position.latitude,
-          position.longitude,
-        );
-      }
-      
-      // Start periodic weather checks (every 30 minutes)
-      debugPrint('Starting periodic weather checks...');
-      await _weatherService.checkWeatherAlerts();
-      
-      // Schedule daily forecast notification (8 AM)
-      debugPrint('Scheduling daily forecast...');
-      await _weatherService.sendDailyForecast();
-      
+
+      // Location + forecast can run later — don't block app open.
+      unawaited(() async {
+        try {
+          final position = await _weatherService.getCurrentLocation();
+          if (position != null) {
+            await _fcmHandler.subscribeToLocationTopic(
+              position.latitude,
+              position.longitude,
+            );
+          }
+          await _weatherService.checkWeatherAlerts();
+          await _weatherService.sendDailyForecast();
+        } catch (e) {
+          debugPrint('Deferred weather setup skipped: $e');
+        }
+      }());
+
       _isInitialized = true;
       debugPrint('✅ NotificationManager initialized successfully');
     } catch (e) {
       debugPrint('❌ Error initializing NotificationManager: $e');
-      rethrow;
+      // Do not rethrow — app UI must keep running.
     }
   }
 

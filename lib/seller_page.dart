@@ -12,6 +12,7 @@ import 'address_map_picker.dart';
 import 'location.dart';
 import 'menu_page.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
 import 'dashboard_page.dart';
 import 'plant_growth_analysis_page.dart';
@@ -19,10 +20,7 @@ import 'crop_suggestion_page.dart';
 import 'list_farm_page.dart';
 import 'grow_plant_page.dart';
 import 'widgets/weather_widget.dart';
-import 'widgets/scheme_chatbot_widget.dart';
 import 'services/navigation_service.dart';
-import 'voice_assistance.dart';
-
 class SellerPage extends StatefulWidget {
   const SellerPage({Key? key}) : super(key: key);
 
@@ -44,12 +42,7 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _languages = [
-      {'name': 'English', 'locale': const Locale('en')},
-      {'name': 'हिन्दी', 'locale': const Locale('hi')},
-      {'name': 'தமிழ்', 'locale': const Locale('ta')},
-      {'name': 'తెలుగు', 'locale': const Locale('te')},
-    ];
+    _languages = List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
     
     // Initialize shimmer animation
     _shimmerController = AnimationController(
@@ -982,16 +975,6 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
         ),
       ),
       ), // close SafeArea
-      floatingActionButton: Stack(
-        children: [
-          const SchemeChatbotWidget(),
-          Positioned(
-            right: 0,
-            bottom: 80,
-            child: const VoiceAssistantWidget(),
-          ),
-        ],
-      ),
     );
   }
 }

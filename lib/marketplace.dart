@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' as latLong;
@@ -10,8 +10,8 @@ import 'order_list_page.dart';
 import 'market_price_page.dart';
 import 'shop_page.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
-import 'voice_assistance.dart';
 import 'subsidies_page.dart';
 
 class MarketplacePage extends StatefulWidget {
@@ -31,12 +31,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
   @override
   void initState() {
     super.initState();
-    _languages = [
-      {'name': 'English', 'locale': const Locale('en')},
-      {'name': 'हिन्दी', 'locale': const Locale('hi')},
-      {'name': 'தமிழ்', 'locale': const Locale('ta')},
-      {'name': 'తెలుగు', 'locale': const Locale('te')},
-    ];
+    _languages = List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
     _updateLocationFromService();
   }
 
@@ -250,24 +245,24 @@ class _MarketplacePageState extends State<MarketplacePage> {
   IconData _getButtonIcon(String label) {
     final lowerLabel = label.toLowerCase();
     if (lowerLabel.contains('order') ||
-        lowerLabel.contains('ऑर्डर') ||
-        lowerLabel.contains('ஆர்டர்') ||
-        lowerLabel.contains('ఆర్డర్')) {
+        lowerLabel.contains('à¤‘à¤°à¥à¤¡à¤°') ||
+        lowerLabel.contains('à®†à®°à¯à®Ÿà®°à¯') ||
+        lowerLabel.contains('à°†à°°à±à°¡à°°à±')) {
       return Icons.shopping_bag_outlined;
     } else if (lowerLabel.contains('market') ||
-        lowerLabel.contains('बाज़ार') ||
-        lowerLabel.contains('சந்தை') ||
-        lowerLabel.contains('మార్కెట్')) {
+        lowerLabel.contains('à¤¬à¤¾à¤œà¤¼à¤¾à¤°') ||
+        lowerLabel.contains('à®šà®¨à¯à®¤à¯ˆ') ||
+        lowerLabel.contains('à°®à°¾à°°à±à°•à±†à°Ÿà±')) {
       return Icons.trending_up;
     } else if (lowerLabel.contains('shop') ||
-        lowerLabel.contains('दुकान') ||
-        lowerLabel.contains('கடை') ||
-        lowerLabel.contains('దుకాణం')) {
+        lowerLabel.contains('à¤¦à¥à¤•à¤¾à¤¨') ||
+        lowerLabel.contains('à®•à®Ÿà¯ˆ') ||
+        lowerLabel.contains('à°¦à±à°•à°¾à°£à°‚')) {
       return Icons.store_outlined;
     } else if (lowerLabel.contains('schemes') ||
-        lowerLabel.contains('योजनाएं') ||
-        lowerLabel.contains('திட்டங்கள்') ||
-        lowerLabel.contains('పథకాలు')) {
+        lowerLabel.contains('à¤¯à¥‹à¤œà¤¨à¤¾à¤à¤‚') ||
+        lowerLabel.contains('à®¤à®¿à®Ÿà¯à®Ÿà®™à¯à®•à®³à¯') ||
+        lowerLabel.contains('à°ªà°¥à°•à°¾à°²à±')) {
       return Icons.policy_outlined;
     }
     return Icons.business;
@@ -280,7 +275,6 @@ class _MarketplacePageState extends State<MarketplacePage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      floatingActionButton: const VoiceAssistantWidget(),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(

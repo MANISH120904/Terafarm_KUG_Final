@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -12,9 +12,8 @@ import 'list_farm_page.dart';
 import 'edit_farm_page.dart';
 import 'menu_page.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
-import 'voice_assistance.dart';
-
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -45,12 +44,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     super.initState();
     
     // Initialize languages array
-    _languages = [
-      {'name': 'English', 'locale': const Locale('en')},
-      {'name': 'हिन्दी', 'locale': const Locale('hi')},
-      {'name': 'தமிழ்', 'locale': const Locale('ta')},
-      {'name': 'తెలుగు', 'locale': const Locale('te')},
-    ];
+    _languages = List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
     
     // Initialize cached streams
     final currentUser = _auth.currentUser;
@@ -109,7 +103,6 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA), // Match seller page background
       drawer: const MenuPage(),
-      floatingActionButton: const VoiceAssistantWidget(),
       body: SafeArea(
         child: Column(
           children: [
@@ -416,7 +409,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "₹${earnings.toStringAsFixed(2)}",
+                        "â‚¹${earnings.toStringAsFixed(2)}",
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -992,7 +985,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       DataCell(Text((idx++).toString())),
                       DataCell(Text(p['cropName'] ?? '')),
                       DataCell(Text("${p['stock in kgs'] ?? ''} Kg")),
-                      DataCell(Text("₹${p['pricePerKg'] ?? ''}")),
+                      DataCell(Text("â‚¹${p['pricePerKg'] ?? ''}")),
                     ]));
                   }
                 }

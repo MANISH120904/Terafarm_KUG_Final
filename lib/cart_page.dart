@@ -58,10 +58,11 @@ class _CartPageState extends State<CartPage> {
         ? LatLng(_deliveryLat!, _deliveryLng!)
         : LatLng(37.7749, -122.4194); // Default: San Francisco
 
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true, // Allows a full-screen modal if needed.
-      builder: (context) => AddressMapPicker(initialLocation: initialLocation),
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddressMapPicker(initialLocation: initialLocation),
+      ),
     );
 
     if (result != null) {

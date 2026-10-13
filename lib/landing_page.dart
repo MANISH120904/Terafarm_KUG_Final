@@ -20,17 +20,21 @@ class _LandingPageState extends State<LandingPage> {
     super.initState();
     _redirectTimer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
-      if (FirebaseAuth.instance.currentUser != null) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) =>
-                MainNavigation(isBuyerMode: true),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        );
+      try {
+        if (FirebaseAuth.instance.currentUser != null) {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) =>
+                  MainNavigation(isBuyerMode: true),
+              transitionsBuilder: (_, animation, __, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Auth redirect skipped: $e');
       }
     });
   }
@@ -43,7 +47,12 @@ class _LandingPageState extends State<LandingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    bool isLoggedIn = false;
+    try {
+      isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    } catch (_) {
+      isLoggedIn = false;
+    }
     // Match TeraFarm sibling landing dimensions / spacing
     final logoTopGap = isLoggedIn ? 20.0 : 60.0;
 

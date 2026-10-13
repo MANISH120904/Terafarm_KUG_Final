@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 
@@ -9,9 +9,8 @@ import 'cart_page.dart';
 import 'Community_page.dart';
 import 'shop_page.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
-import 'voice_assistance.dart';
-
 class BuyersPage extends StatefulWidget {
   const BuyersPage({super.key});
 
@@ -55,7 +54,6 @@ class _BuyersPageState extends State<BuyersPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      floatingActionButton: const VoiceAssistantWidget(),
       appBar: AppBar(
         backgroundColor: Colors.green.shade900,
         leading: Builder(builder: (ctx) {
@@ -82,8 +80,8 @@ class _BuyersPageState extends State<BuyersPage> {
           DropdownButtonHideUnderline(
             child: DropdownButton<Locale>(
               icon: const Icon(Icons.language, color: Colors.white),
-              value: localeProv.locale,
-              items: AppLocalizations.supportedLocales
+              value: AppLocales.resolve(localeProv.locale),
+              items: AppLocales.supported
                   .map((l) => DropdownMenuItem(
                         value: l,
                         child: Text(l.languageCode.toUpperCase(),

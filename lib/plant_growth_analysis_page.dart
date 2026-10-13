@@ -5,8 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'voice_assistance.dart';
-
 class PlantGrowthAnalysisPage extends StatefulWidget {
   const PlantGrowthAnalysisPage({Key? key}) : super(key: key);
 
@@ -400,7 +398,6 @@ class _PlantGrowthAnalysisPageState extends State<PlantGrowthAnalysisPage> {
   Widget build(BuildContext context) {
     final String userId = FirebaseAuth.instance.currentUser!.uid;
     return Scaffold(
-      floatingActionButton: const VoiceAssistantWidget(),
       appBar: AppBar(
         automaticallyImplyLeading: true, // Show the back arrow
         iconTheme: const IconThemeData(color: Colors.white), // Make arrow white

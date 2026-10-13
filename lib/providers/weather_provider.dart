@@ -1,11 +1,10 @@
 // lib/providers/weather_provider.dart
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'dart:async';
-import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import '../location.dart';
 import '../services/weather_service.dart';
+import '../services/live_weather_service.dart';
 import '../services/notification_service.dart';
 
 class WeatherProvider extends ChangeNotifier {
@@ -28,24 +27,25 @@ class WeatherProvider extends ChangeNotifier {
   String? get alert => _alert; // Getter for the alert
 
   WeatherProvider() {
-    _initializeNotifications();
-    _startPeriodicWeatherCheck();
+    // Defer plugin work so first frame is not delayed on cold start.
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      _initializeNotifications();
+      _startPeriodicWeatherCheck();
+    });
   }
 
   Future<void> _initializeNotifications() async {
-    if (!_notificationsInitialized) {
-      print("WeatherProvider: Initializing notifications...");
-      try {
-        await _notificationService.initialize();
-        _notificationsInitialized = true;
-        print("WeatherProvider: Notifications initialized successfully");
-      } catch (e, stackTrace) {
-        print("WeatherProvider: Failed to initialize notifications: $e");
-        print("WeatherProvider: Stack trace: $stackTrace");
-        // Don't mark as initialized if it failed
-        _notificationsInitialized = false;
-        rethrow;
-      }
+    if (_notificationsInitialized) return;
+    print('WeatherProvider: Initializing notifications...');
+    try {
+      await _notificationService.initialize();
+      _notificationsInitialized = true;
+      print('WeatherProvider: Notifications initialized successfully');
+    } catch (e, stackTrace) {
+      print('WeatherProvider: Failed to initialize notifications: $e');
+      print('WeatherProvider: Stack trace: $stackTrace');
+      _notificationsInitialized = false;
+      // Don't rethrow — keep UI responsive on slow devices.
     }
   }
 
@@ -140,11 +140,10 @@ class WeatherProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Fetch weather data using LocationService and HTTP
+  // Fetch weather data using LocationService + Open-Meteo
   Future<void> fetchWeather() async {
     setLoading(true);
     try {
-      // Determine or get existing position
       final locService = LocationService();
       Position? pos = locService.currentPosition;
       if (pos == null) {
@@ -152,35 +151,20 @@ class WeatherProvider extends ChangeNotifier {
         pos = locService.currentPosition;
       }
       if (pos == null) throw Exception('Could not determine location');
-      final query = '${pos.latitude},${pos.longitude}';
-      const key =
-          '994SBTQFYTXZJPS5YLZP5FWGW'; // Replace with your Visual Crossing API key
-      final uri = Uri.https(
-        'weather.visualcrossing.com',
-        '/VisualCrossingWebServices/rest/services/timeline/$query',
-        {
-          'unitGroup': 'metric',
-          'include': 'current',
-          'key': key,
-          'contentType': 'json',
-        },
+
+      final weather = await LiveWeatherService.byCoordinates(
+        lat: pos.latitude,
+        lon: pos.longitude,
       );
-      final res = await http.get(uri);
-      if (res.statusCode != 200)
-        throw Exception('API Error: ${res.statusCode}');
-      final data = json.decode(res.body) as Map<String, dynamic>;
-      final curr = data['currentConditions'] as Map<String, dynamic>;
       setWeather(
-        (curr['temp'] as num).toDouble(),
-        (curr['humidity'] as num).toInt(),
-        curr['conditions'] as String,
+        weather.temperatureC,
+        weather.humidity,
+        weather.condition,
       );
-      
-      // Also check for weather alerts when fetching weather
+
       _checkWeatherAlerts();
     } catch (_) {
       setLoading(false);
-      // ignore error silently or handle as needed
     }
   }
 

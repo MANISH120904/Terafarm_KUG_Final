@@ -1,12 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
-import 'voice_assistance.dart';
-
 class GrowPlantPage extends StatefulWidget {
   const GrowPlantPage({Key? key}) : super(key: key);
 
@@ -62,7 +61,6 @@ class _GrowPlantPageState extends State<GrowPlantPage> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      floatingActionButton: const VoiceAssistantWidget(),
       appBar: AppBar(
         title: Text(
           loc.growPlantTitle,
@@ -103,10 +101,10 @@ class _GrowPlantPageState extends State<GrowPlantPage> {
             child: DropdownButtonHideUnderline(
               child: DropdownButton<Locale>(
                 icon: const Icon(Icons.language, color: Colors.white, size: 20),
-                value: localeProv.locale,
+                value: AppLocales.resolve(localeProv.locale),
                 dropdownColor: const Color(0xFF246B40),
                 style: const TextStyle(color: Colors.white, fontSize: 14),
-                items: AppLocalizations.supportedLocales.map((l) {
+                items: AppLocales.supported.map((l) {
                   return DropdownMenuItem(
                     value: l,
                     child: Text(

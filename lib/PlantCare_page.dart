@@ -1,17 +1,17 @@
 // PlantCare_page.dart
 
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'address_map_picker.dart';
 import 'main.dart' show LocaleProvider;
 import 'menu_page.dart';
+import 'services/live_weather_service.dart';
 import 'config/api_keys.dart';
 
 // Remove the main() function since this is not the main entry point
@@ -64,19 +64,14 @@ class _FarmAiPageState extends State<FarmAiPage> {
     super.initState();
     _plantController.clear();
     
-    _languages = [
-      {'name': 'English', 'locale': const Locale('en')},
-      {'name': 'हिन्दी',  'locale': const Locale('hi')},
-      {'name': 'தமிழ்',  'locale': const Locale('ta')},
-      {'name': 'తెలుగు','locale': const Locale('te')},
-    ];
+    _languages = List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
     
     const geminiApiKey = ApiKeys.gemini;
     _geminiModel = GenerativeModel(
       model: 'gemini-3-flash-preview',
       apiKey: geminiApiKey,
       generationConfig: GenerationConfig(
-        temperature: 0.7, topP: 0.9, topK: 40, maxOutputTokens: 256,
+        temperature: 0.7, topP: 0.9, topK: 40, maxOutputTokens: 1024,
       ),
     );
   }
@@ -92,7 +87,12 @@ class _FarmAiPageState extends State<FarmAiPage> {
     if (perm == LocationPermission.deniedForever) {
       throw Exception("Permissions permanently denied.");
     }
-    final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    final pos = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        timeLimit: Duration(seconds: 12),
+      ),
+    );
     return LatLng(pos.latitude, pos.longitude);
   }
 
@@ -103,10 +103,11 @@ class _FarmAiPageState extends State<FarmAiPage> {
     } catch (_) {
       initial = const LatLng(13.0827, 80.2707);
     }
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => AddressMapPicker(initialLocation: initial),
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddressMapPicker(initialLocation: initial),
+      ),
     );
     if (result != null) {
       setState(() {
@@ -124,39 +125,33 @@ class _FarmAiPageState extends State<FarmAiPage> {
       _advice         = null;
     });
 
-    final key   = '994SBTQFYTXZJPS5YLZP5FWGW';
-    final query = (_latitude != null && _longitude != null)
-        ? '$_latitude,$_longitude'
-        : _cityController.text.trim();
-    final uri = Uri.https(
-      'weather.visualcrossing.com',
-      '/VisualCrossingWebServices/rest/services/timeline/$query',
-      {
-        'unitGroup'  : 'metric',
-        'include'    : 'current',
-        'key'        : key,
-        'contentType': 'json',
-      },
-    );
-
     try {
-      final res = await http.get(uri);
-      if (res.statusCode != 200) {
-        throw Exception('Weather fetch failed: ${res.statusCode}');
+      final LiveWeather weather;
+      if (_latitude != null && _longitude != null) {
+        weather = await LiveWeatherService.byCoordinates(
+          lat: _latitude!,
+          lon: _longitude!,
+        );
+      } else {
+        weather = await LiveWeatherService.byPlaceName(
+          _cityController.text.trim(),
+        );
       }
-      final data = json.decode(res.body) as Map<String, dynamic>;
-      final curr = data['currentConditions'] as Map<String, dynamic>;
+      if (!mounted) return;
       setState(() {
-        _temperature = (curr['temp']    as num).toDouble();
-        _humidity    = (curr['humidity'] as num).toInt();
-        _condition   = curr['conditions'] as String;
+        _temperature = weather.temperatureC;
+        _humidity = weather.humidity;
+        _condition = weather.condition;
+        _latitude ??= weather.latitude;
+        _longitude ??= weather.longitude;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
     } finally {
-      setState(() => _loadingWeather = false);
+      if (mounted) setState(() => _loadingWeather = false);
     }
   }
 
@@ -198,17 +193,19 @@ Include YouTube links in the user’s language.
       final resp = await _geminiModel.generateContent([
         Content.multi([TextPart(prompt)])
       ]);
+      if (!mounted) return;
       setState(() {
         _advice = (resp.text ?? resp.candidates.first.content as String)
             .replaceAll('*', '')
             .trim();
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
     } finally {
-      setState(() => _loadingAdvice = false);
+      if (mounted) setState(() => _loadingAdvice = false);
     }
   }
 

@@ -12,6 +12,7 @@ import 'list_farm_page.dart';
 import 'edit_farm_page.dart';
 import 'menu_page.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
 
 class DashboardPage extends StatefulWidget {
@@ -145,9 +146,9 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                           DropdownButtonHideUnderline(
                             child: DropdownButton<Locale>(
                               icon: const Icon(Icons.language, color: Colors.white),
-                              value: localeProv.locale,
+                              value: AppLocales.resolve(localeProv.locale),
                               dropdownColor: _kPrimaryGreen,
-                              items: AppLocalizations.supportedLocales
+                              items: AppLocales.supported
                                   .map((l) => DropdownMenuItem(
                                         value: l,
                                         child: Text(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
@@ -18,10 +18,9 @@ import 'edit_profile_page.dart';
 import 'dashboard_page.dart';
 import 'ai_page.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
 import 'services/navigation_service.dart';
-import 'voice_assistance.dart';
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -32,12 +31,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _userAddress = '';
 
-  final List<Map<String, dynamic>> _languages = [
-    {'name': 'English', 'locale': const Locale('en')},
-    {'name': 'हिन्दी',  'locale': const Locale('hi')},
-    {'name': 'தமிழ்',   'locale': const Locale('ta')},
-    {'name': 'తెలుగు',  'locale': const Locale('te')},
-  ];
+  final List<Map<String, dynamic>> _languages =
+      List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
 
   @override
   void initState() {
@@ -204,7 +199,6 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         backgroundColor: Colors.white,
         drawer: const MenuPage(),
-        floatingActionButton: const VoiceAssistantWidget(),
         body: SafeArea(
           child: Column(
             children: [

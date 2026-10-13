@@ -6,9 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:provider/provider.dart';
 import 'menu_page.dart';
-import 'voice_assistance.dart';
-
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
 import 'config/api_keys.dart';
 
@@ -21,22 +20,9 @@ class TeradocApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => LocaleProvider(const Locale('en')),
-      child: Consumer<LocaleProvider>(
-        builder: (context, localeProv, _) {
-          return MaterialApp(
-            locale: localeProv.locale,
-            supportedLocales: AppLocalizations.supportedLocales,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            title: AppLocalizations.of(context)!.teradocTitle,
-            debugShowCheckedModeBanner: false,
-            theme: ThemeData(primarySwatch: Colors.green),
-            home: const PlantHealthScreen(),
-          );
-        },
-      ),
-    );
+    // Must NOT nest MaterialApp — Android back on an empty nested navigator
+    // calls SystemNavigator.pop() and kills the whole activity.
+    return const PlantHealthScreen();
   }
 }
 
@@ -65,12 +51,7 @@ class _PlantHealthScreenState extends State<PlantHealthScreen> {
   @override
   void initState() {
     super.initState();
-    _languages = [
-      {'name': 'English', 'locale': const Locale('en')},
-      {'name': 'हिन्दी', 'locale': const Locale('hi')},
-      {'name': 'தமிழ்', 'locale': const Locale('ta')},
-      {'name': 'తెలుగు', 'locale': const Locale('te')},
-    ];
+    _languages = List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
     const apiKey = ApiKeys.gemini;
     
     // Optimized configuration for plant disease detection
@@ -234,10 +215,12 @@ Please try uploading a new image for better results.
 """;
       }
 
+      if (!mounted) return;
       setState(() {
         _analysisResult = analysisText;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _analysisResult = """
 ❌ **ANALYSIS ERROR**
@@ -254,7 +237,7 @@ Please try again with a new image.
 """;
       });
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -340,18 +323,7 @@ REMEMBER: ALL OUTPUT MUST BE IN $languageName LANGUAGE.
         return 'Tamil (தமிழ்)';
       case 'te':
         return 'Telugu (తెలుగు)';
-      case 'kn':
-        return 'Kannada (ಕನ್ನಡ)';
-      case 'ml':
-        return 'Malayalam (മലയാളം)';
-      case 'mr':
-        return 'Marathi (मराठी)';
-      case 'gu':
-        return 'Gujarati (ગુજરાતી)';
-      case 'bn':
-        return 'Bengali (বাংলা)';
-      case 'pa':
-        return 'Punjabi (ਪੰਜਾਬੀ)';
+      case 'en':
       default:
         return 'English';
     }
@@ -365,7 +337,6 @@ REMEMBER: ALL OUTPUT MUST BE IN $languageName LANGUAGE.
     return Scaffold(
       backgroundColor: Colors.white,
       drawer: const MenuPage(),
-      floatingActionButton: const VoiceAssistantWidget(),
       body: SafeArea(
         child: SingleChildScrollView(
           child: IntrinsicHeight(

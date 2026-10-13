@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'services/local_market_price_service.dart';
+import 'services/agmarknet_market_price_service.dart';
 
 class MarketPricePage extends StatefulWidget {
   const MarketPricePage({super.key});
@@ -13,35 +13,35 @@ class _MarketPricePageState extends State<MarketPricePage> {
   String? selectedCommodity;
 
   final List<String> states = [
-    "Andhra Pradesh",
-    "Arunachal Pradesh",
-    "Assam",
-    "Bihar",
-    "Chhattisgarh",
-    "Goa",
-    "Gujarat",
-    "Haryana",
-    "Himachal Pradesh",
-    "Jharkhand",
-    "Karnataka",
-    "Kerala",
-    "Madhya Pradesh",
-    "Maharashtra",
-    "Manipur",
-    "Meghalaya",
-    "Mizoram",
-    "Nagaland",
-    "Odisha",
-    "Punjab",
-    "Rajasthan",
-    "Sikkim",
-    "Tamil Nadu",
-    "Telangana",
-    "Tripura",
-    "Uttar Pradesh",
-    "Uttarakhand",
-    "West Bengal",
-    "Delhi",
+    'Andhra Pradesh',
+    'Arunachal Pradesh',
+    'Assam',
+    'Bihar',
+    'Chhattisgarh',
+    'Goa',
+    'Gujarat',
+    'Haryana',
+    'Himachal Pradesh',
+    'Jharkhand',
+    'Karnataka',
+    'Kerala',
+    'Madhya Pradesh',
+    'Maharashtra',
+    'Manipur',
+    'Meghalaya',
+    'Mizoram',
+    'Nagaland',
+    'Odisha',
+    'Punjab',
+    'Rajasthan',
+    'Sikkim',
+    'Tamil Nadu',
+    'Telangana',
+    'Tripura',
+    'Uttar Pradesh',
+    'Uttarakhand',
+    'West Bengal',
+    'Delhi',
   ];
   List<String> commodities = [];
   List<Map<String, dynamic>> priceHistory = [];
@@ -49,6 +49,8 @@ class _MarketPricePageState extends State<MarketPricePage> {
   bool loadingCommodities = false;
   bool loadingPrices = false;
   String? error;
+  String? sourceNote;
+  bool isLive = false;
 
   Future<void> _fetchCommodities() async {
     if (selectedState == null) return;
@@ -58,17 +60,28 @@ class _MarketPricePageState extends State<MarketPricePage> {
       selectedCommodity = null;
       priceHistory = [];
       error = null;
+      sourceNote = null;
+      isLive = false;
     });
 
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    setState(() {
-      commodities =
-          LocalMarketPriceService.commoditiesForState(selectedState!);
-      if (commodities.isEmpty) {
-        error = 'No produce found for $selectedState.';
-      }
-      loadingCommodities = false;
-    });
+    try {
+      final list =
+          await AgmarknetMarketPriceService.commoditiesForState(selectedState!);
+      if (!mounted) return;
+      setState(() {
+        commodities = list;
+        if (commodities.isEmpty) {
+          error = 'No produce found for $selectedState.';
+        }
+        loadingCommodities = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        error = 'Could not load commodities.';
+        loadingCommodities = false;
+      });
+    }
   }
 
   Future<void> _fetchPrices() async {
@@ -77,36 +90,49 @@ class _MarketPricePageState extends State<MarketPricePage> {
       loadingPrices = true;
       priceHistory = [];
       error = null;
+      sourceNote = null;
     });
 
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    setState(() {
-      priceHistory = LocalMarketPriceService.pricesFor(
+    try {
+      final result = await AgmarknetMarketPriceService.pricesFor(
         state: selectedState!,
         commodity: selectedCommodity!,
       );
-      if (priceHistory.isEmpty) {
-        error = 'No price data for $selectedCommodity in $selectedState.';
-      }
-      loadingPrices = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        priceHistory = result.rows;
+        isLive = result.isLive;
+        sourceNote = result.isLive
+            ? 'Live Agmarknet / data.gov.in'
+            : (result.note ?? 'Demo prices');
+        if (priceHistory.isEmpty) {
+          error = 'No price data for $selectedCommodity in $selectedState.';
+        }
+        loadingPrices = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        error = 'Could not load prices.';
+        loadingPrices = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Market Price Analysis')),
+      appBar: AppBar(title: const Text('Market Price Analysis')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             DropdownButtonFormField<String>(
-              decoration: InputDecoration(labelText: 'Select State'),
+              decoration: const InputDecoration(labelText: 'Select State'),
               value: selectedState,
-              items:
-                  states
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
+              items: states
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .toList(),
               onChanged: (s) {
                 setState(() => selectedState = s);
                 _fetchCommodities();
@@ -114,40 +140,63 @@ class _MarketPricePageState extends State<MarketPricePage> {
             ),
             const SizedBox(height: 16),
             if (loadingCommodities)
-              CircularProgressIndicator()
+              const CircularProgressIndicator()
             else if (commodities.isNotEmpty)
               DropdownButtonFormField<String>(
-                decoration: InputDecoration(labelText: 'Select Produce'),
+                decoration: const InputDecoration(labelText: 'Select Produce'),
                 value: selectedCommodity,
-                items:
-                    commodities
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                        .toList(),
+                items: commodities
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
                 onChanged: (c) {
                   setState(() => selectedCommodity = c);
                   _fetchPrices();
                 },
               ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            if (sourceNote != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  sourceNote!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isLive ? Colors.green.shade800 : Colors.orange.shade800,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
             if (loadingPrices)
-              CircularProgressIndicator()
+              const CircularProgressIndicator()
             else if (error != null)
-              Text(error!, style: TextStyle(color: Colors.red)),
-            const SizedBox(height: 16),
+              Text(error!, style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 8),
             if (!loadingPrices && error == null && priceHistory.isNotEmpty)
               Expanded(
                 child: ListView.builder(
                   itemCount: priceHistory.length,
                   itemBuilder: (_, i) {
                     final row = priceHistory[i];
+                    final variety = (row['variety'] ?? '').toString();
+                    final district = (row['district'] ?? '').toString();
+                    final minP = row['min_price'];
+                    final maxP = row['max_price'];
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: ListTile(
                         title: Text(
-                          '${row['market']} — ₹${row['modal_price']} per quintal',
+                          '${row['market']} — ₹${row['modal_price']} / quintal',
                         ),
                         subtitle: Text(
-                          '${row['arrival_date'] ?? row['date'] ?? ''}',
+                          [
+                            if (district.isNotEmpty) district,
+                            if (variety.isNotEmpty) variety,
+                            row['arrival_date'] ?? '',
+                            if (minP != null &&
+                                maxP != null &&
+                                '$minP'.isNotEmpty)
+                              'Min ₹$minP · Max ₹$maxP',
+                          ].where((e) => e.toString().trim().isNotEmpty).join(' · '),
                         ),
                       ),
                     );

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
 import 'l10n/app_localizations.dart';
+import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
 
 class LeaderboardPage extends StatefulWidget {
@@ -103,9 +104,9 @@ class _LeaderboardPageState extends State<LeaderboardPage>
                   Icons.language,
                   color: Colors.white,
                 ),
-                value: localeProv.locale,
+                value: AppLocales.resolve(localeProv.locale),
                 dropdownColor: const Color(0xFF246B40),
-                items: AppLocalizations.supportedLocales.map((l) {
+                items: AppLocales.supported.map((l) {
                   return DropdownMenuItem(
                     value: l,
                     child: Container(

@@ -14,7 +14,8 @@ class ApiKeys {
     defaultValue: '',
   );
 
-  /// Optional — market prices use local mock data by default.
+  /// Optional — data.gov.in / Agmarknet mandi prices.
+  /// Get free at: https://www.data.gov.in (Generate API Key).
   static const String agmarknet = String.fromEnvironment(
     'AGMARKNET_API_KEY',
     defaultValue: '',
@@ -32,9 +33,20 @@ class ApiKeys {
     defaultValue: '',
   );
 
+  /// Optional — ImgBB free image host (https://api.imgbb.com/).
+  /// Used when Firebase Storage is blocked (Spark). Catbox is used if empty.
+  static const String imgbb = String.fromEnvironment(
+    'IMGBB_API_KEY',
+    defaultValue: '',
+  );
+
   static bool get hasGemini => gemini.isNotEmpty;
 
   static bool get hasGoogleMaps => googleMaps.isNotEmpty;
 
   static bool get hasYoutube => youtube.isNotEmpty;
+
+  static bool get hasImgbb => imgbb.isNotEmpty;
+
+  static bool get hasAgmarknet => agmarknet.isNotEmpty;
 }

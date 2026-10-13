@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'menu_page.dart';
-import 'voice_assistance.dart';
 import 'services/local_crop_service.dart';
 
 class CropSuggestionPage extends StatefulWidget {
@@ -72,7 +71,6 @@ class _CropSuggestionPageState extends State<CropSuggestionPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       drawer: const MenuPage(),
-      floatingActionButton: const VoiceAssistantWidget(),
       bottomNavigationBar: Container(
         width: double.infinity,
         height: 70,
