@@ -1,6 +1,6 @@
 # TeraFarm : Cultivating Urban Agriculture through Collaborative Growth and AI-Powered Guidance
 
-### By Manish M, Madhan S, Jyoti Prakash Behera, Samyuktha S, Deepika Samad, NV Yogeshwaran
+### By Manish M, Madhan S, Jyoti Prakash Behera
 
 ## Problem Statement
 In this new age, good, sustainably-grown, healthy food is gaining popularity. But, with growing cities, the land to grow and support our population with quality food is challenging. TeraFarm addresses the growing need for sustainable urban agriculture by empowering apartment dwellers to cultivate their own food, fostering community collaboration, and promoting environmental awareness. 
