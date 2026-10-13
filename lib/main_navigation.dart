@@ -182,13 +182,17 @@ class StaticBottomNav extends StatelessWidget {
           type: BottomNavigationBarType.fixed,
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 11,
-            letterSpacing: 0.3,
+            fontSize: 10,
+            letterSpacing: 0.1,
+            height: 1.1,
           ),
           unselectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w500,
-            fontSize: 10,
+            fontSize: 9,
+            height: 1.1,
           ),
+          selectedFontSize: 10,
+          unselectedFontSize: 9,
           onTap: onTap,
           items: [
             BottomNavigationBarItem(

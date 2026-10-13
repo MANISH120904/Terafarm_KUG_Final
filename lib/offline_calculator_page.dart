@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class OfflineCalculatorPage extends StatefulWidget {
   const OfflineCalculatorPage({Key? key}) : super(key: key);
@@ -32,11 +33,9 @@ class _OfflineCalculatorPageState extends State<OfflineCalculatorPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Offline Calculators'),
-        backgroundColor: const Color(0xFF246B40),
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'Offline Calculators',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(

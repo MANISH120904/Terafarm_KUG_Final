@@ -2,35 +2,18 @@ import 'package:flutter/material.dart';
 import 'offline_diagnosis_page.dart';
 import 'offline_calculator_page.dart';
 import 'model_management_page.dart';
+import 'theme/tera_farm_theme.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class OfflineToolkitPage extends StatelessWidget {
   const OfflineToolkitPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Icons.offline_bolt, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Offline AI Toolkit'),
-          ],
-        ),
-        backgroundColor: Colors.green.shade700,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.green.shade700, Colors.green.shade500],
-            ),
-          ),
-        ),
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'Offline AI Toolkit',
+      backgroundColor: TeraFarmColors.surface,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -203,13 +186,17 @@ class OfflineToolkitPage extends StatelessWidget {
                   color: Colors.green.shade600,
                   size: 28,
                 ),
-                SizedBox(width: 12),
-                Text(
-                  'Available Offline Tools',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade800,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Available Offline Tools',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade800,
+                    ),
                   ),
                 ),
               ],

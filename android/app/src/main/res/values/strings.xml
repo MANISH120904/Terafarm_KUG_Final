@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Web client ID from google-services.json (client_type 3). Required for Google Sign-In idToken on Android. -->
+    <string name="default_web_client_id">76540064593-hujgspuafnic6689cc2pc34jvooimfqo.apps.googleusercontent.com</string>
+</resources>

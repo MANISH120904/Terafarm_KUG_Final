@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "76540064593-l6o1qm1ud8s53v1k67693oo1pjjub23b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.terafarm2",
+            "certificate_hash": "3e0d6dc07c8825f797612d672f868681a7e015b0"
+          }
+        },
+        {
           "client_id": "76540064593-hujgspuafnic6689cc2pc34jvooimfqo.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,13 @@
             {
               "client_id": "76540064593-hujgspuafnic6689cc2pc34jvooimfqo.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "76540064593-mi31aomec8q02tj5aopoid6l297qmpnq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.terafarm2"
+              }
             }
           ]
         }

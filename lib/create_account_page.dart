@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Firestore import
 import 'login_page.dart';
+import 'main_navigation.dart';
 import 'services/google_auth_service.dart';
 import 'utils/fcm_token_manager.dart';
 
@@ -70,28 +71,41 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      UserCredential? userCredential = await _googleAuthService.signInWithGoogle();
+      final UserCredential? userCredential =
+          await _googleAuthService.signInWithGoogle();
       if (userCredential != null && userCredential.user != null) {
-        // Setup weather notifications for new user
         _setupWeatherNotifications();
-        
-        // Redirect to home page or wherever appropriate after successful Google sign-up
+
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Successfully signed up with Google!')),
+          const SnackBar(
+            content: Text('Successfully signed up with Google!'),
+            backgroundColor: Colors.green,
+          ),
         );
-        // Navigate to your home page here
-        // Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MainNavigation(isBuyerMode: true),
+          ),
+        );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google Sign-up failed: ${e.toString()}')),
+        SnackBar(
+          content: Text(_googleAuthService.getErrorMessage(e)),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -119,23 +133,33 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // ✅ Ensure background is transparent
-      body: SafeArea( // ✅ Add SafeArea to avoid overlapping with system UI
-        child: SingleChildScrollView( // ✅ Wrap with SingleChildScrollView
-          child: Container(
-            width: double.infinity,
-            height: MediaQuery.of(context).size.height, // ✅ Adjust height dynamically
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.3),
-              image: DecorationImage(
-                image: AssetImage("assets/create_account_bg.png"),
-                fit: BoxFit.cover,
-              ),
-            ),
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 50),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      resizeToAvoidBottomInset: true,
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/create_account_bg.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  24,
+                  20,
+                  24 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - 48,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                 Text(
                   "Hello!",
                   style: TextStyle(
@@ -159,32 +183,42 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 _buildTextField("Password", passwordController, isPassword: true),
 
                 SizedBox(height: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: EdgeInsets.symmetric(vertical: 15),
-                  ),
-                  onPressed: _isLoading ? null : _registerUser, // Disable button when loading
-                  child: _isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Create an account",
-                              style: TextStyle(fontSize: 18, color: Colors.white),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
+                    onPressed: _isLoading ? null : _registerUser,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
                             ),
-                            SizedBox(width: 10),
-                            Icon(Icons.arrow_forward, color: Colors.white),
-                          ],
-                        ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Create an account',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.arrow_forward, color: Colors.white),
+                            ],
+                          ),
+                  ),
                 ),
                 
                 SizedBox(height: 20),
@@ -211,27 +245,32 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 SizedBox(height: 20),
                 
                 // Google Sign-up Button
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
                     ),
-                    elevation: 2,
-                  ),
-                  onPressed: _isLoading ? null : _signUpWithGoogle,
-                  icon: Image.asset(
-                    'assets/google.png',
-                    height: 24,
-                    width: 24,
-                  ),
-                  label: Text(
-                    'Sign up with Google',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                    onPressed: _isLoading ? null : _signUpWithGoogle,
+                    icon: Image.asset(
+                      'assets/google.png',
+                      height: 24,
+                      width: 24,
+                    ),
+                    label: const Text(
+                      'Sign up with Google',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
@@ -245,14 +284,17 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                         MaterialPageRoute(builder: (context) => LoginPage()),
                       );
                     },
-                    child: Text(
-                      "Already have an account? Login",
+                    child: const Text(
+                      'Already have an account? Login',
                       style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ),
                 ),
-              ],
-            ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),

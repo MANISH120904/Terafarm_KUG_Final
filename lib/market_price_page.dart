@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/agmarknet_market_price_service.dart';
+import 'theme/tera_farm_theme.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class MarketPricePage extends StatefulWidget {
   const MarketPricePage({super.key});
@@ -121,47 +123,72 @@ class _MarketPricePageState extends State<MarketPricePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Market Price Analysis')),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'Market Price Analysis',
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Select State'),
-              value: selectedState,
-              items: states
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                  .toList(),
-              onChanged: (s) {
-                setState(() => selectedState = s);
-                _fetchCommodities();
-              },
-            ),
-            const SizedBox(height: 16),
-            if (loadingCommodities)
-              const CircularProgressIndicator()
-            else if (commodities.isNotEmpty)
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Select Produce'),
-                value: selectedCommodity,
-                items: commodities
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (c) {
-                  setState(() => selectedCommodity = c);
-                  _fetchPrices();
-                },
+            TeraFarmSurfaceCard(
+              margin: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'Select State'),
+                    value: selectedState,
+                    items: states
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .toList(),
+                    onChanged: (s) {
+                      setState(() => selectedState = s);
+                      _fetchCommodities();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (loadingCommodities)
+                    const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: CircularProgressIndicator(),
+                    )
+                  else if (commodities.isNotEmpty)
+                    DropdownButtonFormField<String>(
+                      decoration:
+                          const InputDecoration(labelText: 'Select Produce'),
+                      value: selectedCommodity,
+                      items: commodities
+                          .map(
+                              (c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: (c) {
+                        setState(() => selectedCommodity = c);
+                        _fetchPrices();
+                      },
+                    ),
+                ],
               ),
+            ),
             const SizedBox(height: 12),
             if (sourceNote != null)
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  sourceNote!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isLive ? Colors.green.shade800 : Colors.orange.shade800,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isLive
+                        ? TeraFarmColors.accent.withOpacity(0.15)
+                        : Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    sourceNote!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isLive
+                          ? TeraFarmColors.primaryDark
+                          : Colors.orange.shade800,
+                    ),
                   ),
                 ),
               ),
@@ -184,8 +211,15 @@ class _MarketPricePageState extends State<MarketPricePage> {
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              TeraFarmColors.accent.withOpacity(0.2),
+                          child: const Icon(Icons.storefront,
+                              color: TeraFarmColors.primary),
+                        ),
                         title: Text(
                           '${row['market']} — ₹${row['modal_price']} / quintal',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Text(
                           [
@@ -196,7 +230,9 @@ class _MarketPricePageState extends State<MarketPricePage> {
                                 maxP != null &&
                                 '$minP'.isNotEmpty)
                               'Min ₹$minP · Max ₹$maxP',
-                          ].where((e) => e.toString().trim().isNotEmpty).join(' · '),
+                          ]
+                              .where((e) => e.toString().trim().isNotEmpty)
+                              .join(' · '),
                         ),
                       ),
                     );

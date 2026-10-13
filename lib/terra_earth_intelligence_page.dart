@@ -2094,21 +2094,30 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(Icons.satellite_alt, color: Colors.white),
+            const Icon(Icons.satellite_alt, color: Colors.white),
             const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Farm Satellite Analysis',
-                  style: TextStyle(fontSize: 18),
-                ),
-                if (_farmerName.isNotEmpty && _farmerName != 'Farmer')
-                  Text(
-                    'Hello $_farmerName!',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Farm Satellite Analysis',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 18),
                   ),
-              ],
+                  if (_farmerName.isNotEmpty && _farmerName != 'Farmer')
+                    Text(
+                      'Hello $_farmerName!',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),

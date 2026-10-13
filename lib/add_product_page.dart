@@ -39,36 +39,56 @@ class _AddProductPageState extends State<AddProductPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Add Product")),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(labelText: "Product Name"),
-            ),
-            TextField(
-              controller: priceController,
-              decoration: InputDecoration(labelText: "Price"),
-            ),
-
-            DropdownButton<String>(
-              value: category,
-              items:
-                  ["Vegetables", "Fruits", "Herbs"].map((cat) {
-                    return DropdownMenuItem(value: cat, child: Text(cat));
-                  }).toList(),
-              onChanged: (value) => setState(() => category = value!),
-            ),
-
-            TextField(
-              controller: descriptionController,
-              decoration: InputDecoration(labelText: "Description"),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(onPressed: _addProduct, child: Text("Add Product")),
-          ],
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(title: const Text('Add Product')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Product Name'),
+              ),
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Price'),
+              ),
+              DropdownButtonFormField<String>(
+                value: category,
+                isExpanded: true,
+                items: ['Vegetables', 'Fruits', 'Herbs']
+                    .map(
+                      (cat) => DropdownMenuItem(
+                        value: cat,
+                        child: Text(cat, overflow: TextOverflow.ellipsis),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) setState(() => category = value);
+                },
+                decoration: const InputDecoration(labelText: 'Category'),
+              ),
+              TextField(
+                controller: descriptionController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Description'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _addProduct,
+                child: const Text('Add Product'),
+              ),
+            ],
+          ),
         ),
       ),
     );

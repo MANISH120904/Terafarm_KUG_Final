@@ -1,25 +1,15 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart' as latLong;
 
 import 'location.dart';
 import 'Product_page.dart';
 import 'menu_page.dart';
 import 'address_map_picker.dart';
-import 'Community_page.dart';
-import 'cart_page.dart';
-import 'buyers_page.dart';
-import 'add_product_page.dart';
-import 'edit_farm_page.dart';
-import 'edit_profile_page.dart';
-import 'dashboard_page.dart';
-import 'ai_page.dart';
 import 'l10n/app_localizations.dart';
-import 'l10n/app_locales.dart';
-import 'main.dart' show LocaleProvider;
-import 'services/navigation_service.dart';
+import 'widgets/mode_language_bar.dart';
+import 'widgets/tera_farm_hub_app_bar.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -29,9 +19,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _userAddress = '';
-
-  final List<Map<String, dynamic>> _languages =
-      List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
 
   // Default India (Chennai) — never SF.
   static const _fallback = latLong.LatLng(13.0827, 80.2707);
@@ -194,7 +181,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
-    final localeProv = Provider.of<LocaleProvider>(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -207,59 +193,9 @@ class _HomePageState extends State<HomePage> {
         body: SafeArea(
           child: Column(
             children: [
-              // Top banner
-              Container(
-                width: double.infinity,
-                height: 112,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/top_bar.png'),
-                    fit: BoxFit.cover,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8, left: 24, right: 24),
-                  child: Stack(
-                    children: [
-          Positioned.fill(
-            child: Column(
-              children: [
-                const SizedBox(height: 15),
-                Center(
-                  child: Text(
-                    loc.welcomeTo,
-                    style: const TextStyle(color: Colors.white, fontSize: 17),
-                  ),
-                ),
-                const SizedBox(height: 0),
-                Text(
-                  loc.appTitle,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-                      Positioned(
-                        left: -8,
-                        top: 18,
-                        child: Builder(
-                          builder: (ctx) => IconButton(
-                            icon: const Icon(Icons.menu, color: Colors.white),
-                            onPressed: () => Scaffold.of(ctx).openDrawer(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              TeraFarmHubAppBar(
+                title: loc.appTitle,
+                subtitle: loc.welcomeTo,
               ),
 
               Expanded(
@@ -272,140 +208,7 @@ class _HomePageState extends State<HomePage> {
                       _buildLocationWidget(loc),
                       const SizedBox(height: 16),
 
-                      // Toggle Buyer/Farmer + Language selector
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: Container(
-                              height: 48,
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    const Color(0xFF22C55E),
-                                    const Color(0xFF16A34A),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(13),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.shopping_cart_outlined,
-                                            size: 16,
-                                            color: const Color(0xFF22C55E),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            loc.buyer,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 13,
-                                              color: const Color(0xFF22C55E),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        NavigationService.navigateToBuyerSeller(context, true);
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.transparent,
-                                          borderRadius: BorderRadius.circular(13),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.agriculture,
-                                              size: 16,
-                                              color: Colors.white,
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              loc.farmer,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 13,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 2,
-                            child: Container(
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFF22C55E).withOpacity(0.2)),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<Map<String, dynamic>>(
-                                  value: _languages.firstWhere(
-                                    (lang) => lang['locale'].languageCode == localeProv.locale.languageCode,
-                                    orElse: () => _languages[0],
-                                  ),
-                                  icon: Icon(Icons.keyboard_arrow_down_rounded, 
-                                           color: const Color(0xFF22C55E), size: 20),
-                                  style: const TextStyle(
-                                    color: Color(0xFF1F2937),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  items: _languages.map((lang) {
-                                    return DropdownMenuItem(
-                                      value: lang,
-                                      child: Text(
-                                        lang['name'],
-                                        style: const TextStyle(
-                                          color: Color(0xFF1F2937),
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (newLang) {
-                                    if (newLang != null) {
-                                      localeProv.setLocale(newLang['locale']);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      ModeLanguageBar.buyerStyle(isSellerMode: false),
 
                       const SizedBox(height: 16),
                       Container(

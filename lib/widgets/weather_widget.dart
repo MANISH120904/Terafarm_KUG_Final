@@ -352,6 +352,9 @@ class WeatherWidgetState extends State<WeatherWidget> with TickerProviderStateMi
     
     return Text(
       widget.buttonText,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 16,

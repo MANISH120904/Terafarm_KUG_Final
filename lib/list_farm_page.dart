@@ -7,6 +7,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart'; // New import for geolocation
 import 'address_map_picker.dart'; // Import your location picker widget
 import 'services/farm_image_upload_service.dart';
+import 'theme/tera_farm_theme.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class ListFarmPage extends StatefulWidget {
   const ListFarmPage({super.key});
@@ -405,34 +407,10 @@ class _ListFarmPageState extends State<ListFarmPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text(
-          "List a Farm",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            letterSpacing: 0.5,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF246B40),
-                const Color(0xFF2E8B57),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'List a Farm',
+      backgroundColor: TeraFarmColors.surface,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

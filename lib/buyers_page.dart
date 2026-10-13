@@ -77,25 +77,20 @@ class _BuyersPageState extends State<BuyersPage> {
                       builder: (_) => const CartPage(cartItems: [])));
             },
           ),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<Locale>(
-              icon: const Icon(Icons.language, color: Colors.white),
-              value: AppLocales.resolve(localeProv.locale),
-              items: AppLocales.supported
-                  .map((l) => DropdownMenuItem(
-                        value: l,
-                        child: Text(l.languageCode.toUpperCase(),
-                            style: const TextStyle(color: Colors.white)),
-                      ))
-                  .toList(),
-              onChanged: (locale) {
-                if (locale != null) {
-                  localeProv.setLocale(locale);
-                }
-              },
-            ),
+          PopupMenuButton<Locale>(
+            icon: const Icon(Icons.language, color: Colors.white),
+            tooltip: 'Language',
+            onSelected: (locale) => localeProv.setLocale(locale),
+            itemBuilder: (context) => AppLocales.supported
+                .map(
+                  (l) => PopupMenuItem(
+                    value: l,
+                    child: Text(l.languageCode.toUpperCase()),
+                  ),
+                )
+                .toList(),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
         ],
       ),
       drawer: const MenuPage(),
@@ -120,33 +115,52 @@ class _BuyersPageState extends State<BuyersPage> {
                   const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           SizedBox(
-            height: 80,
+            height: 88,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: categories.map((c) {
                 return GestureDetector(
-                  onTap: () => print("Filtering by ${c['key']}"),
-                  child: Column(
-                    children: [
-                      Image.asset(c['image']!, width: 50),
-                      const SizedBox(height: 5),
-                      Text(c['name']!),
-                    ],
+                  onTap: () {},
+                  child: SizedBox(
+                    width: 72,
+                    child: Column(
+                      children: [
+                        Image.asset(c['image']!, width: 50, height: 50),
+                        const SizedBox(height: 5),
+                        Text(
+                          c['name']!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }).toList(),
             ),
           ),
           const SizedBox(height: 20),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(loc.farmsAroundYou,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
-            IconButton(
-              icon: Icon(Icons.filter_list, color: Colors.grey.shade700),
-              onPressed: () {},
-            ),
-          ]),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  loc.farmsAroundYou,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.filter_list, color: Colors.grey.shade700),
+                onPressed: () {},
+              ),
+            ],
+          ),
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('farms')
@@ -233,8 +247,13 @@ class _BuyersPageState extends State<BuyersPage> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
+        type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.purple,
         unselectedItemColor: Colors.grey,
+        selectedFontSize: 10,
+        unselectedFontSize: 9,
+        selectedLabelStyle: const TextStyle(height: 1.1, fontSize: 10),
+        unselectedLabelStyle: const TextStyle(height: 1.1, fontSize: 9),
         onTap: _onNavItemTapped,
         items: [
           BottomNavigationBarItem(icon: const Icon(Icons.home), label: loc.navHome),

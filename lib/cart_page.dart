@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:latlong2/latlong.dart'; // Import LatLng from latlong2
 // Import the AddressMapPicker widget. Ensure this file exists in your project.
 import 'address_map_picker.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class CartPage extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -203,17 +204,16 @@ class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     final cartCount = widget.cartItems.length;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.green.shade900,
-        title: Text("Cart ($cartCount)"),
-        actions: [
-          TextButton(
-            onPressed: _emptyCart,
-            child: const Text("Empty Cart", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'Cart ($cartCount)',
+      actions: [
+        IconButton(
+          onPressed: _emptyCart,
+          tooltip: 'Empty Cart',
+          icon: const Icon(Icons.delete_outline, color: Colors.white),
+        ),
+      ],
       body: cartCount == 0
           ? const Center(child: Text("Your cart is empty."))
           : SingleChildScrollView(

@@ -4,6 +4,7 @@ import 'home_page.dart';
 import 'Community_page.dart';
 import 'dashboard_page.dart';
 import 'cart_page.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class ShopPage extends StatefulWidget {
   const ShopPage({super.key});
@@ -253,19 +254,16 @@ class _ShopPageState extends State<ShopPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text("Shop"),
-        backgroundColor: Colors.green.shade800,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.cloud_upload),
-            tooltip: "Upload Demo Inventory",
-            onPressed: uploadInventoryData,
-          ),
-        ],
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'Shop',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.cloud_upload, color: Colors.white),
+          tooltip: 'Upload Demo Inventory',
+          onPressed: uploadInventoryData,
+        ),
+      ],
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())

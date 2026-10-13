@@ -13,6 +13,7 @@ import 'l10n/app_localizations.dart';
 import 'l10n/app_locales.dart';
 import 'package:TeraFarm/providers/weather_provider.dart';
 import 'package:TeraFarm/Cloud Notification/notification_manager.dart';
+import 'theme/tera_farm_theme.dart';
 
 /// Completes when Firebase (and light prefs) are ready for UI that needs them.
 final Completer<void> appBootstrap = Completer<void>();
@@ -126,6 +127,7 @@ class TeraFarmApp extends StatelessWidget {
           ],
           localeResolutionCallback: (locale, _) => AppLocales.resolve(locale),
           title: 'TeraFarm',
+          theme: TeraFarmTheme.light(),
           home: const AuthWrapper(),
           routes: {
             '/growth-analysis': (_) => const PlantGrowthAnalysisPage(),

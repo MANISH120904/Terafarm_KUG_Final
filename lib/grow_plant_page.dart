@@ -6,6 +6,9 @@ import 'package:provider/provider.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
+import 'theme/tera_farm_theme.dart';
+import 'widgets/tera_farm_scaffold.dart';
+
 class GrowPlantPage extends StatefulWidget {
   const GrowPlantPage({Key? key}) : super(key: key);
 
@@ -59,74 +62,25 @@ class _GrowPlantPageState extends State<GrowPlantPage> {
     final loc = AppLocalizations.of(context)!;
     final localeProv = Provider.of<LocaleProvider>(context, listen: false);
 
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(
-          loc.growPlantTitle,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            letterSpacing: 0.5,
-          ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: loc.growPlantTitle,
+      backgroundColor: TeraFarmColors.surface,
+      actions: [
+        PopupMenuButton<Locale>(
+          icon: const Icon(Icons.language, color: Colors.white, size: 22),
+          tooltip: 'Language',
+          onSelected: (locale) => localeProv.setLocale(locale),
+          itemBuilder: (context) => AppLocales.supported
+              .map(
+                (l) => PopupMenuItem(
+                  value: l,
+                  child: Text(l.languageCode.toUpperCase()),
+                ),
+              )
+              .toList(),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF246B40),
-                const Color(0xFF2E8B57),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<Locale>(
-                icon: const Icon(Icons.language, color: Colors.white, size: 20),
-                value: AppLocales.resolve(localeProv.locale),
-                dropdownColor: const Color(0xFF246B40),
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                items: AppLocales.supported.map((l) {
-                  return DropdownMenuItem(
-                    value: l,
-                    child: Text(
-                      l.languageCode.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (Locale? newLocale) {
-                  if (newLocale != null) {
-                    localeProv.setLocale(newLocale);
-                  }
-                },
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-        ],
-      ),
+      ],
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

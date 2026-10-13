@@ -294,25 +294,38 @@ Include YouTube links in the user’s language.
                     // Language Selection
                     Align(
                       alignment: Alignment.centerRight,
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<Map<String, dynamic>>(
-                          value: _languages.firstWhere(
-                            (lang) => (lang['locale'] as Locale).languageCode == 
-                                      localeProv.locale.languageCode,
-                            orElse: () => _languages[0],
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 160),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<Map<String, dynamic>>(
+                            isExpanded: true,
+                            isDense: true,
+                            value: _languages.firstWhere(
+                              (lang) =>
+                                  (lang['locale'] as Locale).languageCode ==
+                                  localeProv.locale.languageCode,
+                              orElse: () => _languages[0],
+                            ),
+                            icon: const Icon(
+                              Icons.arrow_drop_down,
+                              color: Color(0xFF246B40),
+                            ),
+                            items: _languages.map((lang) {
+                              return DropdownMenuItem<Map<String, dynamic>>(
+                                value: lang,
+                                child: Text(
+                                  lang['name'] as String,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (newLang) {
+                              if (newLang != null) {
+                                localeProv.setLocale(newLang['locale']);
+                              }
+                            },
                           ),
-                          icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF246B40)),
-                          items: _languages.map((lang) {
-                            return DropdownMenuItem<Map<String, dynamic>>(
-                              value: lang,
-                              child: Text(lang['name']),
-                            );
-                          }).toList(),
-                          onChanged: (newLang) {
-                            if (newLang != null) {
-                              localeProv.setLocale(newLang['locale']);
-                            }
-                          },
                         ),
                       ),
                     ),

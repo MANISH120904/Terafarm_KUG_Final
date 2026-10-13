@@ -21,6 +21,19 @@ flutter run --dart-define-from-file=dart_defines.json
 
 `firebase_options.dart` + `android/app/google-services.json` are FlutterFire **client** config for project `terafarm-16cdd` (needed to run Auth/Firestore). They are not your Gemini key.
 
+### Google Sign-In (Android)
+
+If Google login fails with **ApiException: 10** / blank cancel / missing ID token:
+
+1. Firebase Console → Project **terafarm-16cdd** → Project settings → Your apps → Android (`com.example.terafarm2`)
+2. Add **SHA-1** (debug):
+   `3E:0D:6D:C0:7C:88:25:F7:97:61:2D:67:2F:86:86:81:A7:E0:15:B0`
+3. Enable **Authentication → Sign-in method → Google**
+4. Download the new `google-services.json` into `android/app/` (it should include an Android `oauth_client` with `client_type: 1`)
+5. Full rebuild: `flutter clean && flutter run --dart-define-from-file=dart_defines.json`
+
+App code already sets `serverClientId` / `default_web_client_id` to the Web client in that JSON.
+
 ### Cloud Storage (farm images)
 
 As of 2024–2026, **Cloud Storage for Firebase requires the Blaze plan** (Spark API calls fail with 402/403 / object-not-found). Blaze still has a no-cost Storage tier if you stay under the free quota.

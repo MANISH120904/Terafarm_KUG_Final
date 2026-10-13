@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'widgets/tera_farm_scaffold.dart';
+
 class PlantGrowthAnalysisPage extends StatefulWidget {
   const PlantGrowthAnalysisPage({Key? key}) : super(key: key);
 
@@ -397,16 +399,9 @@ class _PlantGrowthAnalysisPageState extends State<PlantGrowthAnalysisPage> {
   @override
   Widget build(BuildContext context) {
     final String userId = FirebaseAuth.instance.currentUser!.uid;
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: true, // Show the back arrow
-        iconTheme: const IconThemeData(color: Colors.white), // Make arrow white
-        title: const Text(
-          'Plant Growth Analysis',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.green.shade900,
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'Plant Growth Analysis',
       body: StreamBuilder<QuerySnapshot>(
         stream:
             FirebaseFirestore.instance

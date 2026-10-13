@@ -1,6 +1,4 @@
-﻿import 'package:geolocator/geolocator.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' as latLong;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,14 +9,12 @@ import 'menu_page.dart';
 import 'plantcare_page.dart';
 import 'teradoc_page.dart';
 import 'recommendation_ai_page.dart';
-import 'home_page.dart';
 import 'address_map_picker.dart';
 import 'location.dart';
 import 'sustainable.dart';
 import 'l10n/app_localizations.dart';
-import 'l10n/app_locales.dart';
-import 'main.dart' show LocaleProvider;
-import 'services/navigation_service.dart';
+import 'widgets/mode_language_bar.dart';
+import 'widgets/tera_farm_hub_app_bar.dart';
 import 'terra_earth_intelligence_page.dart';
 import 'offline_toolkit_page.dart';
 
@@ -30,7 +26,6 @@ class AIPage extends StatefulWidget {
 
 class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
   String _userAddress = '';
-  late List<Map<String, dynamic>> _languages;
   late AnimationController _shimmerController;
   late Animation<double> _shimmerAnimation;
   late Timer? _shimmerTimer;
@@ -38,9 +33,6 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // Initialize supported language list for dropdown
-    _languages = List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
-    
     // Initialize shimmer animation
     _shimmerController = AnimationController(
       duration: const Duration(milliseconds: 2500),
@@ -477,226 +469,30 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
-    final localeProv = Provider.of<LocaleProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      drawer: const Drawer(child: MenuPage()),
+      drawer: const MenuPage(),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Top banner
-              Container(
-                width: double.infinity,
-                height: 112,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                      image: AssetImage('assets/top_bar.png'),
-                      fit: BoxFit.cover),
-                  borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(24),
-                      bottomRight: Radius.circular(24)),
-                ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.only(top: 8, bottom: 2, left: 24, right: 24),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 15),
-                            Text(loc.welcomeTo,
-                                style:
-                                    const TextStyle(color: Colors.white, fontSize: 17)),
-                            Text(loc.appTitle,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        left: -8,
-                        top: 18,
-                        child: Builder(
-                          builder: (ctx) => IconButton(
-                            icon: const Icon(Icons.menu, color: Colors.white),
-                            onPressed: () => Scaffold.of(ctx).openDrawer(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              TeraFarmHubAppBar(
+                title: loc.appTitle,
+                subtitle: loc.welcomeTo,
               ),
               const SizedBox(height: 16),
               _buildLocationWidget(loc),
               const SizedBox(height: 20),
 
-              // Buyer/Farmer toggle + language
+              // Buyer/Farmer toggle + language (overflow-safe)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Container(
-                        height: 48,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFF16A34A),
-                              const Color(0xFF15803D),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const HomePage()),
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(13),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.shopping_cart_outlined,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        loc.buyer,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  NavigationService.navigateToBuyerSeller(context, true);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF0FDF4),
-                                    borderRadius: BorderRadius.circular(13),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 6,
-                                        spreadRadius: 1,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.agriculture,
-                                        size: 16,
-                                        color: const Color(0xFF16A34A),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        loc.farmer,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                          color: const Color(0xFF16A34A),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF5F7F3),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF16A34A).withOpacity(0.3)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 10,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<Map<String, dynamic>>(
-                            value: _languages.firstWhere(
-                              (lang) =>
-                                  (lang['locale'] as Locale).languageCode ==
-                                  localeProv.locale.languageCode,
-                              orElse: () => _languages[0],
-                            ),
-                            icon: Icon(Icons.keyboard_arrow_down_rounded, 
-                                     color: const Color(0xFF16A34A), size: 20),
-                            style: const TextStyle(
-                              color: Color(0xFF1F2937),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            items: _languages.map((lang) {
-                              return DropdownMenuItem<Map<String, dynamic>>(
-                                value: lang,
-                                child: Text(
-                                  lang['name'] as String,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (lang) {
-                              if (lang != null) {
-                                localeProv.setLocale(lang['locale']);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ModeLanguageBar(
+                  isSellerMode: true,
                 ),
               ),
+
 
               const SizedBox(height: 24),
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'theme/tera_farm_theme.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class SubsidiesPage extends StatefulWidget {
   const SubsidiesPage({super.key});
@@ -97,12 +99,9 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Government Subsidies & Schemes'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'Subsidies & Schemes',
       body: ListView.builder(
         padding: const EdgeInsets.all(16.0),
         itemCount: subsidies.length,
@@ -131,7 +130,7 @@ class _SubsidiesPageState extends State<SubsidiesPage> {
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: subsidy['status'] == 'Active'
-                      ? Colors.green
+                      ? TeraFarmColors.primary
                       : Colors.orange,
                   borderRadius: BorderRadius.circular(12),
                 ),

@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:latlong2/latlong.dart' as latLong;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:math';
 
@@ -11,15 +10,14 @@ import 'address_map_picker.dart';
 import 'location.dart';
 import 'menu_page.dart';
 import 'l10n/app_localizations.dart';
-import 'l10n/app_locales.dart';
-import 'main.dart' show LocaleProvider;
 import 'dashboard_page.dart';
 import 'plant_growth_analysis_page.dart';
 import 'crop_suggestion_page.dart';
 import 'list_farm_page.dart';
 import 'grow_plant_page.dart';
 import 'widgets/weather_widget.dart';
-import 'services/navigation_service.dart';
+import 'widgets/mode_language_bar.dart';
+import 'widgets/tera_farm_hub_app_bar.dart';
 class SellerPage extends StatefulWidget {
   const SellerPage({Key? key}) : super(key: key);
 
@@ -29,7 +27,6 @@ class SellerPage extends StatefulWidget {
 
 class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
   String _userAddress = '';
-  late List<Map<String, dynamic>> _languages;
   bool isSeller = true;
   final Color primary = const Color(0xFF246B40);
   final GlobalKey<WeatherWidgetState> _weatherKey = GlobalKey<WeatherWidgetState>();
@@ -41,8 +38,6 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _languages = List<Map<String, dynamic>>.from(AppLocales.dropdownItems);
-    
     // Initialize shimmer animation
     _shimmerController = AnimationController(
       duration: const Duration(milliseconds: 2500),
@@ -297,19 +292,25 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                 const SizedBox(height: 12),
                 Text(
                   title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
+                    height: 1.15,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
+                    height: 1.2,
                   ),
                 ),
               ],
@@ -543,7 +544,6 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
-    final localeProv = Provider.of<LocaleProvider>(context);
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       drawer: const MenuPage(),
@@ -551,53 +551,9 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Top banner
-              Container(
-                width: double.infinity,
-                height: 112,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/top_bar.png'),
-                    fit: BoxFit.cover,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
-                  ),
-                ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.only(top: 8, bottom: 2, left: 24, right: 24),
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(loc.welcomeTo,
-                                style:
-                                    const TextStyle(color: Colors.white, fontSize: 17)),
-                            Text(loc.appTitle,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        left: -8,
-                        top: 18,
-                        child: Builder(
-                          builder: (ctx) => IconButton(
-                            icon: const Icon(Icons.menu, color: Colors.white),
-                            onPressed: () => Scaffold.of(ctx).openDrawer(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              TeraFarmHubAppBar(
+                title: loc.appTitle,
+                subtitle: loc.welcomeTo,
               ),
 
               const SizedBox(height: 16),
@@ -610,170 +566,12 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
 
               const SizedBox(height: 20),
 
-              // Buyer/Farmer toggle + language
+              // Buyer/Farmer toggle + language (overflow-safe)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Container(
-                        height: 48,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFF16A34A),
-                              const Color(0xFF15803D),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  NavigationService.navigateToBuyerSeller(context, false);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: !isSeller ? const Color(0xFFF0FDF4) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(13),
-                                    boxShadow: !isSeller ? [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 6,
-                                        spreadRadius: 1,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ] : [],
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.shopping_cart_outlined,
-                                        size: 16,
-                                        color: !isSeller ? const Color(0xFF16A34A) : Colors.white,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        loc.buyer,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                          color: !isSeller ? const Color(0xFF16A34A) : Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => setState(() => isSeller = true),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: isSeller ? const Color(0xFFF0FDF4) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(13),
-                                    boxShadow: isSeller ? [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 6,
-                                        spreadRadius: 1,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ] : [],
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.agriculture,
-                                        size: 16,
-                                        color: isSeller ? const Color(0xFF16A34A) : Colors.white,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        loc.farmer,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                          color: isSeller ? const Color(0xFF16A34A) : Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF5F7F3),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF16A34A).withOpacity(0.3)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 10,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<Map<String, dynamic>>(
-                            value: _languages.firstWhere(
-                              (lang) =>
-                                  lang['locale'].languageCode ==
-                                  localeProv.locale.languageCode,
-                              orElse: () => _languages[0],
-                            ),
-                            icon: Icon(Icons.keyboard_arrow_down_rounded, 
-                                     color: const Color(0xFF16A34A), size: 20),
-                            style: const TextStyle(
-                              color: Color(0xFF1F2937),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            items: _languages.map((lang) {
-                              return DropdownMenuItem<Map<String, dynamic>>(
-                                value: lang,
-                                child: Text(
-                                  lang['name'],
-                                  style: const TextStyle(
-                                    color: Color(0xFF1F2937),
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (newLang) {
-                              if (newLang != null) {
-                                localeProv.setLocale(newLang['locale'] as Locale);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ModeLanguageBar(
+                  isSellerMode: isSeller,
+                  onSellerSelected: (v) => setState(() => isSeller = v),
                 ),
               ),
 
@@ -833,12 +631,16 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Text(
-                                loc.quickActions,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey.shade800,
+                              Expanded(
+                                child: Text(
+                                  loc.quickActions,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade800,
+                                  ),
                                 ),
                               ),
                             ],

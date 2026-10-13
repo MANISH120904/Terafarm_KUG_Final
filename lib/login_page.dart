@@ -172,100 +172,71 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset:
-          true, // Allow layout to adjust when keyboard appears
-      backgroundColor: Colors.transparent, // Ensure transparency
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(
-                0.3,
-              ), // Semi-transparent white overlay
-              image: DecorationImage(
-                image: AssetImage("assets/login_bg.png"),
-                fit: BoxFit.cover,
-              ),
-            ),
-            padding: EdgeInsets.symmetric(horizontal: 20).copyWith(
-              top: MediaQuery.of(context).padding.top + 20,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: AnimatedContainer(
-                    duration: Duration(
-                      milliseconds: 300,
-                    ), // Smooth animation duration
-                    curve: Curves.easeInOut, // Smooth easing curve
-                    padding: EdgeInsets.only(
-                      top: 40,
-                      bottom:
-                          MediaQuery.of(context).viewInsets.bottom +
-                          20, // Adjust for keyboard
-                    ),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Hello!",
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(
-                            height: 10,
-                          ), // Add spacing between "Hello!" and "Login"
-                          Text(
-                            "Login",
-                            style: TextStyle(
-                              fontSize: 22,
-                              color: Colors.orangeAccent,
-                            ),
-                          ),
-                          SizedBox(
-                            height: 30,
-                          ), // Add spacing before the text fields
-
-                          _buildTextField("Email Address", emailController),
-                          SizedBox(
-                            height: 15,
-                          ), // Add spacing between the text fields
-                          _buildTextField(
-                            "Password",
-                            passwordController,
-                            isPassword: true,
-                          ),
-                          SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-                  ),
+      resizeToAvoidBottomInset: true,
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/login_bg.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  24,
+                  20,
+                  20 + MediaQuery.of(context).viewInsets.bottom,
                 ),
-
-                // Bottom Section
-                Column(
-                  children: [
-                    _isLoading
-                        ? CircularProgressIndicator() // Show loading indicator
-                        : ElevatedButton(
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minHeight: constraints.maxHeight - 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Hello!',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: Colors.orangeAccent,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      _buildTextField('Email Address', emailController),
+                      const SizedBox(height: 15),
+                      _buildTextField(
+                        'Password',
+                        passwordController,
+                        isPassword: true,
+                      ),
+                      const SizedBox(height: 24),
+                      if (_isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
-                            padding: EdgeInsets.symmetric(vertical: 15),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
                           ),
                           onPressed: () => _loginUser(context),
-                          child: Row(
+                          child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                "Login",
+                                'Login',
                                 style: TextStyle(
                                   fontSize: 18,
                                   color: Colors.white,
@@ -276,112 +247,115 @@ class _LoginPageState extends State<LoginPage> {
                             ],
                           ),
                         ),
-                    
-                    SizedBox(height: 15),
-                    
-                    // Divider with "OR"
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: Colors.white.withOpacity(0.5))),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 15),
-                          child: Text(
-                            "OR",
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        Expanded(child: Divider(color: Colors.white.withOpacity(0.5))),
-                      ],
-                    ),
-                    
-                    SizedBox(height: 15),
-                    
-                    // Google Sign-in Button
-                    _isLoading
-                        ? Container() // Hide Google button when loading
-                        : ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black87,
-                              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                            ),
-                            onPressed: () => _loginWithGoogle(context),
-                            icon: Image.asset(
-                              'assets/google.png', // Make sure you have Google logo in assets
-                              height: 24,
-                              width: 24,
-                            ),
-                            label: Text(
-                              "Continue with Google",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                    
-                    SizedBox(height: 20),
-                    
-                    // Developer Mode Button (Emulator only)
-                    if (Platform.isAndroid)
-                      Column(
+                      const SizedBox(height: 15),
+                      Row(
                         children: [
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orangeAccent,
-                              side: BorderSide(color: Colors.orangeAccent),
-                              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
+                          Expanded(
+                            child: Divider(
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 15),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            onPressed: () => _devLogin(context),
-                            icon: Icon(Icons.science, size: 20),
-                            label: Text(
-                              DevAuthHelper.isOffline
-                                  ? "🛟 Dev Login (Offline)"
-                                  : "🧪 Dev Login (Emulator)",
-                              style: TextStyle(fontSize: 14),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: Colors.white.withOpacity(0.5),
                             ),
                           ),
-                          SizedBox(height: 5),
-                          Text(
-                            DevAuthHelper.isOffline
-                                ? "Offline mode: local data only"
-                                : "Test account: farmer@terafarm.dev",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.6),
-                              fontSize: 11,
-                            ),
-                          ),
-                          SizedBox(height: 15),
                         ],
                       ),
-                    
-                    Center(
-                      child: TextButton(
-                        onPressed:
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CreateAccountPage(),
-                              ),
+                      const SizedBox(height: 15),
+                      if (!_isLoading)
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black87,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 20,
                             ),
-                        child: Text(
-                          "Don't have an account? Sign up",
-                          style: TextStyle(color: Colors.white),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          onPressed: () => _loginWithGoogle(context),
+                          icon: Image.asset(
+                            'assets/google.png',
+                            height: 24,
+                            width: 24,
+                          ),
+                          label: const Text(
+                            'Continue with Google',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 20),
+                      if (Platform.isAndroid) ...[
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.orangeAccent,
+                            side: const BorderSide(color: Colors.orangeAccent),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 20,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          onPressed: () => _devLogin(context),
+                          icon: const Icon(Icons.science, size: 20),
+                          label: Text(
+                            DevAuthHelper.isOffline
+                                ? 'Dev Login (Offline)'
+                                : 'Dev Login (Emulator)',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          DevAuthHelper.isOffline
+                              ? 'Offline mode: local data only'
+                              : 'Test account: farmer@terafarm.dev',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 11,
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                      ],
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CreateAccountPage(),
+                            ),
+                          ),
+                          child: const Text(
+                            "Don't have an account? Sign up",
+                            style: TextStyle(color: Colors.white),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }

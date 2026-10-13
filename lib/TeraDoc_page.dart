@@ -402,10 +402,11 @@ REMEMBER: ALL OUTPUT MUST BE IN $languageName LANGUAGE.
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: const Text(
+                const Expanded(
+                  child: Text(
                     'Upload Photo',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
@@ -414,29 +415,43 @@ REMEMBER: ALL OUTPUT MUST BE IN $languageName LANGUAGE.
                     ),
                   ),
                 ),
-                const Spacer(),
-                DropdownButtonHideUnderline(
-                child: DropdownButton<Map<String, dynamic>>(
-                  value: _languages.firstWhere(
-                    (lang) => lang['locale'].languageCode == localeProv.locale.languageCode,
-                    orElse: () => _languages[0],
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 140),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<Map<String, dynamic>>(
+                      isExpanded: true,
+                      isDense: true,
+                      value: _languages.firstWhere(
+                        (lang) =>
+                            lang['locale'].languageCode ==
+                            localeProv.locale.languageCode,
+                        orElse: () => _languages[0],
+                      ),
+                      icon: const Icon(
+                        Icons.arrow_drop_down,
+                        color: Color(0xFF246B40),
+                      ),
+                      items: _languages.map((lang) {
+                        return DropdownMenuItem<Map<String, dynamic>>(
+                          value: lang,
+                          child: Text(
+                            lang['name'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (Map<String, dynamic>? newLang) {
+                        if (newLang != null) {
+                          localeProv.setLocale(newLang['locale']);
+                        }
+                      },
+                    ),
                   ),
-                  icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF246B40)),
-                  items: _languages.map((lang) {
-                    return DropdownMenuItem<Map<String, dynamic>>(
-                      value: lang,
-                      child: Text(lang['name']),
-                    );
-                  }).toList(),
-                  onChanged: (Map<String, dynamic>? newLang) {
-                    if (newLang != null) {
-                      localeProv.setLocale(newLang['locale']);
-                    }
-                  },
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
 
           // ——— IMAGE PREVIEW ———

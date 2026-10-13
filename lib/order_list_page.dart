@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'theme/tera_farm_theme.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class OrderListPage extends StatefulWidget {
   const OrderListPage({Key? key}) : super(key: key);
@@ -25,15 +27,10 @@ class _OrderListPageState extends State<OrderListPage> {
     // The seller must be logged in; we use that seller's UID to filter orders
     final String sellerId = _auth.currentUser!.uid;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.green.shade800,
-        title: const Text(
-          "Orders",
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'Orders',
+      backgroundColor: TeraFarmColors.surface,
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('orders')

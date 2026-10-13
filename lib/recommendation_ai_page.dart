@@ -246,26 +246,43 @@ Be practical, concise, and farmer-friendly. Use plain text (no markdown asterisk
                 ),
                 child: Row(
                   children: [
-                    const Text(
-                      "Select Space Type:",
-                      style: TextStyle(fontSize: 16, color: Colors.black87),
+                    const Expanded(
+                      child: Text(
+                        'Select Space Type:',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 16, color: Colors.black87),
+                      ),
                     ),
-                    const Spacer(),
-                    DropdownButton<String>(
-                      value: _selectedSpaceType,
-                      underline: const SizedBox(),
-                      icon: const Icon(Icons.arrow_drop_down, color: _kPrimaryGreen),
-                      items: _spaceTypes.map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value, style: const TextStyle(fontSize: 16)),
-                        );
-                      }).toList(),
-                      onChanged: (newValue) {
-                        setState(() {
-                          _selectedSpaceType = newValue!;
-                        });
-                      },
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          isDense: true,
+                          value: _selectedSpaceType,
+                          icon: const Icon(
+                            Icons.arrow_drop_down,
+                            color: _kPrimaryGreen,
+                          ),
+                          items: _spaceTypes.map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              _selectedSpaceType = newValue!;
+                            });
+                          },
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -298,28 +315,45 @@ Be practical, concise, and farmer-friendly. Use plain text (no markdown asterisk
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _kFieldBorder),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _selectedTimeUnit,
-                      underline: const SizedBox(),
-                      icon: const Icon(Icons.arrow_drop_down, color: _kPrimaryGreen),
-                      items: _timeUnits.map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value, style: const TextStyle(fontSize: 16)),
-                        );
-                      }).toList(),
-                      onChanged: (newValue) {
-                        setState(() {
-                          _selectedTimeUnit = newValue!;
-                        });
-                      },
+                  Flexible(
+                    flex: 2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: _kFieldBorder),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          isDense: true,
+                          value: _selectedTimeUnit,
+                          icon: const Icon(
+                            Icons.arrow_drop_down,
+                            color: _kPrimaryGreen,
+                          ),
+                          items: _timeUnits.map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              _selectedTimeUnit = newValue!;
+                            });
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ],

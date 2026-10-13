@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'services/gemma_ai_service.dart';
 import 'services/model_download_manager.dart';
+import 'theme/tera_farm_theme.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class OfflineDiagnosisPage extends StatefulWidget {
   const OfflineDiagnosisPage({Key? key}) : super(key: key);
@@ -321,29 +323,10 @@ class _OfflineDiagnosisPageState extends State<OfflineDiagnosisPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Icons.local_hospital, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Offline Plant Doctor'),
-          ],
-        ),
-        backgroundColor: Colors.green.shade700,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.green.shade700, Colors.green.shade500],
-            ),
-          ),
-        ),
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'Offline Plant Doctor',
+      backgroundColor: TeraFarmColors.surface,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(

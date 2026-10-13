@@ -5,6 +5,8 @@ import 'l10n/app_localizations.dart';
 import 'providers/weather_provider.dart';
 import 'services/live_weather_service.dart';
 import 'test_notification_page.dart';
+import 'theme/tera_farm_theme.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class WeatherPage extends StatefulWidget {
   const WeatherPage({Key? key}) : super(key: key);
@@ -123,12 +125,10 @@ class _WeatherPageState extends State<WeatherPage> with SingleTickerProviderStat
     final loc = AppLocalizations.of(context)!;
     final gradientColors = _getWeatherGradient();
     
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(loc.getWeather),
-        backgroundColor: gradientColors.first,
-        foregroundColor: Colors.white,
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: loc.getWeather,
+      backgroundColor: gradientColors.first,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

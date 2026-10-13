@@ -6,9 +6,15 @@ import 'package:flutter/foundation.dart';
 
 /// Google Authentication Service for handling Google Sign-in/Sign-up
 class GoogleAuthService {
+  /// Web OAuth client from `android/app/google-services.json` (client_type: 3).
+  /// Required on Android so `authentication.idToken` is non-null for Firebase.
+  static const String _webClientId =
+      '76540064593-hujgspuafnic6689cc2pc34jvooimfqo.apps.googleusercontent.com';
+
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
+    scopes: const ['email', 'profile'],
+    serverClientId: _webClientId,
   );
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -43,10 +49,16 @@ class GoogleAuthService {
       print('✅ Google user selected: ${googleUser.email}');
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
-      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
-        throw Exception('Failed to obtain Google authentication tokens');
+      if (googleAuth.idToken == null) {
+        throw Exception(
+          'Google Sign-In did not return an ID token. '
+          'Add this app\'s SHA-1 to Firebase Console → Project settings → '
+          'Your apps → Android, then download a fresh google-services.json. '
+          'Debug SHA-1: 3E:0D:6D:C0:7C:88:25:F7:97:61:2D:67:2F:86:86:81:A7:E0:15:B0',
+        );
       }
 
       // Create a new credential
@@ -93,15 +105,20 @@ class GoogleAuthService {
         );
       }
       
-      if (error.toString().contains('PlatformException')) {
+      final msg = error.toString();
+      // ApiException 10 = DEVELOPER_ERROR (SHA-1 / OAuth client misconfigured)
+      if (msg.contains('ApiException: 10') ||
+          msg.contains('DEVELOPER_ERROR') ||
+          msg.contains('PlatformException')) {
         throw Exception(
-          'Platform error occurred. Please ensure:\n'
-          '1. Google Play Services is installed and updated\n'
-          '2. SHA-1 certificate is added to Firebase Console\n'
-          '3. google-services.json is up to date'
+          'Google Sign-In config error (often missing SHA-1).\n'
+          '1. Firebase Console → Project settings → Your Android app\n'
+          '2. Add SHA-1: 3E:0D:6D:C0:7C:88:25:F7:97:61:2D:67:2F:86:86:81:A7:E0:15:B0\n'
+          '3. Download google-services.json into android/app/\n'
+          '4. Rebuild the app',
         );
       }
-      
+
       rethrow;
     }
   }
@@ -276,8 +293,14 @@ class GoogleAuthService {
       return 'An account already exists with the same email but different credentials.';
     } else if (error.toString().contains('credential-already-in-use')) {
       return 'This Google account is already linked to another user.';
-    } else if (error.toString().contains('cancelled')) {
+    } else if (error.toString().contains('cancelled') ||
+        error.toString().contains('canceled')) {
       return 'Sign-in was cancelled.';
+    } else if (error.toString().contains('ApiException: 10') ||
+        error.toString().contains('SHA-1') ||
+        error.toString().contains('DEVELOPER_ERROR') ||
+        error.toString().contains('ID token')) {
+      return error.toString().replaceFirst('Exception: ', '');
     } else {
       return 'Authentication failed. Please try again.';
     }

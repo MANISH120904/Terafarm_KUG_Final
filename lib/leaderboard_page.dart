@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/app_locales.dart';
 import 'main.dart' show LocaleProvider;
+import 'theme/tera_farm_theme.dart';
 
 class LeaderboardPage extends StatefulWidget {
   const LeaderboardPage({Key? key}) : super(key: key);
@@ -18,7 +19,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
-  final double _tileHeight = 80.0;
+  final double _tileHeight = 96.0;
   int _currentUserIndex = -1;
   bool _showFloatingYou = false;
 
@@ -71,6 +72,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     final currentUserLocation = null; // fetch if you have it
 
     return Scaffold(
+      backgroundColor: TeraFarmColors.surface,
       appBar: AppBar(
         title: Text(
           loc.leaderboardTitle,
@@ -81,10 +83,10 @@ class _LeaderboardPageState extends State<LeaderboardPage>
           ),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF246B40),
+        backgroundColor: TeraFarmColors.primary,
         foregroundColor: Colors.white,
         elevation: 8,
-        shadowColor: const Color(0xFF246B40).withOpacity(0.3),
+        shadowColor: TeraFarmColors.primary.withOpacity(0.3),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
             bottomLeft: Radius.circular(20),
@@ -92,45 +94,20 @@ class _LeaderboardPageState extends State<LeaderboardPage>
           ),
         ),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<Locale>(
-                icon: const Icon(
-                  Icons.language,
-                  color: Colors.white,
-                ),
-                value: AppLocales.resolve(localeProv.locale),
-                dropdownColor: const Color(0xFF246B40),
-                items: AppLocales.supported.map((l) {
-                  return DropdownMenuItem(
+          PopupMenuButton<Locale>(
+            icon: const Icon(Icons.language, color: Colors.white),
+            tooltip: 'Language',
+            onSelected: (locale) => localeProv.setLocale(locale),
+            itemBuilder: (context) => AppLocales.supported
+                .map(
+                  (l) => PopupMenuItem(
                     value: l,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        l.languageCode.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (Locale? newLocale) {
-                  if (newLocale != null) localeProv.setLocale(newLocale);
-                },
-              ),
-            ),
+                    child: Text(l.languageCode.toUpperCase()),
+                  ),
+                )
+                .toList(),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -358,7 +335,10 @@ class _LeaderboardPageState extends State<LeaderboardPage>
           ),
           child: Padding(
             padding: const EdgeInsets.all(4),
-            child: SizedBox(height: _tileHeight, child: child),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: _tileHeight),
+              child: child,
+            ),
           ),
         ),
       ),

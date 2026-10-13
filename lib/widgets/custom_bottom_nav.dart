@@ -56,14 +56,18 @@ class CustomBottomNav extends StatelessWidget {
           unselectedItemColor: Colors.white.withOpacity(0.6),
           currentIndex: currentIndex,
           type: BottomNavigationBarType.fixed,
+          selectedFontSize: 10,
+          unselectedFontSize: 9,
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 11,
-            letterSpacing: 0.3,
+            fontSize: 10,
+            letterSpacing: 0.1,
+            height: 1.1,
           ),
           unselectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w500,
-            fontSize: 10,
+            fontSize: 9,
+            height: 1.1,
           ),
           onTap: (i) {
             NavigationService.navigateToPage(context, i, currentIndex);

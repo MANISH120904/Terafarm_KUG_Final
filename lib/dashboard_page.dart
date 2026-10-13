@@ -693,12 +693,16 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                'Quick Actions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
+              Expanded(
+                child: Text(
+                  'Quick Actions',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
                 ),
               ),
             ],
@@ -858,12 +862,16 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                loc.yourFarm,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
+              Expanded(
+                child: Text(
+                  loc.yourFarm,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
                 ),
               ),
             ],
@@ -947,12 +955,16 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                loc.productListings,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
+              Expanded(
+                child: Text(
+                  loc.productListings,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
                 ),
               ),
             ],
@@ -1059,6 +1071,8 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
           Expanded(
             child: DropdownButtonHideUnderline(
               child: DropdownButton<Map<String, dynamic>>(
+                isExpanded: true,
+                isDense: true,
                 value: _languages.firstWhere(
                   (lang) =>
                       lang['locale'].languageCode ==
@@ -1076,7 +1090,9 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                   return DropdownMenuItem<Map<String, dynamic>>(
                     value: lang,
                     child: Text(
-                      lang['name'],
+                      lang['name'] as String,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Color(0xFF1F2937),
                         fontWeight: FontWeight.w500,

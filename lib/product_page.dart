@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'cart_page.dart';
+import 'theme/tera_farm_theme.dart';
+import 'widgets/tera_farm_scaffold.dart';
 
 class ProductPage extends StatefulWidget {
   final String farmId; // Document ID from Firestore
@@ -62,7 +64,7 @@ class _ProductPageState extends State<ProductPage> {
         if (_hasAnyQuantity) {
           bottomBar = Container(
             height: 60,
-            color: Colors.red,
+            color: TeraFarmColors.primary,
             child: InkWell(
               onTap: () {
                 final List<Map<String, dynamic>> cartItems = [];
@@ -101,28 +103,19 @@ class _ProductPageState extends State<ProductPage> {
           );
         }
 
-        return Scaffold(
-          appBar: AppBar(
-            backgroundColor: Colors.green.shade900,
-            title: Row(
-              children: [
-                Transform.translate(
-                  offset: const Offset(-40, 5),
-                  child: Image.asset("assets/terafarm_logo.png", height: 40),
-                ),
-              ],
+        return TeraFarmScaffold(
+          mode: TeraFarmScaffoldMode.inner,
+          title: 'Farm Products',
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications, color: Colors.white),
+              onPressed: () {},
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications, color: Colors.white),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: const Icon(Icons.shopping_cart, color: Colors.white),
-                onPressed: () {},
-              ),
-            ],
-          ),
+            IconButton(
+              icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              onPressed: () {},
+            ),
+          ],
           bottomNavigationBar: bottomBar,
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -160,10 +153,16 @@ class _ProductPageState extends State<ProductPage> {
                   style: TextStyle(color: Colors.grey.shade700),
                 ),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Scale: $scale"),
+                    Expanded(
+                      child: Text(
+                        'Scale: $scale',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.star, color: Colors.orange, size: 16),
                         Text(rating.toString()),
