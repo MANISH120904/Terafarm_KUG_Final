@@ -1,0 +1,133 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ / editors
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+
+# Flutter/Dart/Pub
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+**/build/
+.packages
+untranslated_messages.json
+
+# Symbolication / obfuscation
+app.*.symbols
+app.*.map.json
+
+# Android
+/android/app/debug
+/android/app/profile
+/android/app/release
+.gradle/
+android/.gradle/
+**/local.properties
+*.jks
+*.keystore
+
+# iOS / macOS
+**/ios/Pods/
+**/ios/.symlinks/
+**/macos/Pods/
+**/Flutter/ephemeral/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# Node
+**/node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Env / secrets — never commit
+.env
+.env.*
+**/.env
+functions/.env
+dart_defines.json
+lib/config/api_keys.dart.bak
+tools/migration/old-firebase.json
+tools/migration/new-firebase.json
+**/serviceAccount*.json
+**/*-firebase-adminsdk*.json
+*.pem
+*.p12
+
+# Unity caches / project noise (not needed for Flutter app)
+/Library/
+/Temp/
+/UserSettings/
+/Packages/
+/ProjectSettings/
+/Logs/
+/MemoryCaptures/
+/obj/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.meta
+
+# Offline ML weights / local DBs
+/offline_models/
+*.tflite
+*.h5
+*.hprof
+*.db
+cropgenome_guardian.db
+
+# Tooling residue
+.playwright-mcp/
+.cursor/
+canvases/
+
+# Large / binary junk
+*.jar
+!android/gradle/wrapper/gradle-wrapper.jar
+*.zip
+*.so
+*.lib
+*.pack
+*.dill
+*.bin
+executionHistory.bin
+*.apk
+*.aab
+*.ipa
+
+# Keep package manifests
+!functions/package.json
+!functions/package-lock.json
+!tools/migration/package.json
+!tools/migration/package-lock.json

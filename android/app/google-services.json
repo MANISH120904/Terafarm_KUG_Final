@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "76540064593",
+    "project_id": "terafarm-16cdd",
+    "storage_bucket": "terafarm-16cdd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:76540064593:android:bdf1f6381959acbb981970",
+        "android_client_info": {
+          "package_name": "com.example.terafarm2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "76540064593-hujgspuafnic6689cc2pc34jvooimfqo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcgRvXonvRiyjj1yd9ln0rcMi1D22ePbc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "76540064593-hujgspuafnic6689cc2pc34jvooimfqo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

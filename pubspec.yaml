@@ -1,0 +1,178 @@
+name: TeraFarm
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the build number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.8
+  firebase_core: ^3.12.1
+  firebase_auth: ^5.5.1
+  firebase_storage: ^12.4.4
+  cloud_firestore: ^5.6.5
+  cloud_functions: ^5.2.2
+  image_picker: ^1.0.7
+  image_picker_android: ^0.8.12+11
+  image_picker_ios: ^0.8.12
+  http: ^1.1.0
+  permission_handler: ^11.4.0
+  provider: ^6.1.5
+  google_generative_ai: ^0.4.6-dev
+  google_sign_in: ^6.2.1
+  fl_chart: ^0.70.0
+  html: ^0.15.4
+  url_launcher: ^6.1.14
+  url_launcher_android: ^6.3.21
+  url_launcher_ios: ^6.3.1
+  url_launcher_macos: ^3.2.0
+  # flutter_bluetooth_serial: ^0.4.0  # Commented out due to AGP compatibility issues
+  geolocator: ^13.0.4
+  geocoding: ^3.0.0
+  latlong2: ^0.9.0
+  flutter_map: ^6.1.0  # Fixed non-standard space here
+  google_maps_flutter: ^2.12.3
+  flutter_localizations:
+    sdk: flutter
+  shared_preferences: any
+  shared_preferences_android: ^2.3.2
+  shared_preferences_foundation: ^2.5.2
+  intl: any
+  lottie: ^3.3.0
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^6.0.10
+  web3dart: ^2.6.0
+ 
+  flutter_tts: ^3.6.3
+  speech_to_text: ^7.2.0
+  language_detector: ^1.0.1
+  flutter_local_notifications: ^17.0.0
+  firebase_messaging: ^15.2.10
+  timezone: ^0.9.2
+  image: ^4.0.17
+  dio: ^5.8.0+1
+  path_provider: ^2.1.0
+  path_provider_android: ^2.2.10
+  path_provider_foundation: ^2.4.0
+  file_picker: ^8.0.0+1
+  share_plus: ^10.0.0
+  # AR and 3D Model Viewing - Using web-based approach for compatibility
+  webview_flutter: ^4.4.2
+  # Using pure Dart implementation for offline AI - no external ML dependencies
+  
+  
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+  flutter_lints: ^5.0.0
+
+dependency_overrides:
+  speech_to_text: 7.1.0
+  
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/Icon.jpg" # your icon image path
+  # Run `flutter pub run flutter_launcher_icons` to generate icons
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+  generate: true
+
+  
+  assets:
+    - assets/logo.png
+    - assets/create_account_bg.png
+    - assets/login_bg.png
+    - assets/google.png
+    - assets/terafarm_logo.png
+    - assets/onion.png
+    - assets/tomato.png
+    - assets/beans.png
+    - assets/greens.png
+    - assets/sample_farm.png
+    - assets/sample_farm2.png
+    - assets/Apple.png
+    - assets/grape.png
+    - assets/growing_bags.png
+    - assets/tomato_seed.png
+    - assets/pot.png
+    - assets/Boy1.png
+    - assets/Boy2.png
+    - assets/Boy3.png 
+    - assets/Boy4.png
+    - assets/Boy5.png
+    - assets/Boy6.png
+    - assets/Boy7.png
+    - assets/Boy8.png
+    - assets/Boy9.png
+    - assets/Boy10.png
+    - assets/Boy11.png
+    - assets/Boy12.png
+    - assets/Girl1.png
+    - assets/Girl2.png
+    - assets/Girl3.png
+    - assets/Girl4.png
+    - assets/top_bar.png
+    - assets/bottom_bar.png
+    - assets/alovera.png
+    - assets/beans1.png
+    - assets/eggplant.png
+    - assets/garlic.png
+    - assets/ginger.png
+    - assets/lemon.png
+    - assets/mint.png
+    - assets/mulberry.png
+    - assets/others.png
+    - assets/papaya.png
+    - assets/pineapple.png
+    - assets/spinach.png
+    - assets/strawberry.png
+    - assets/tomato1.png
+    - assets/tomato1.png
+    - assets/landing.png
+    - assets/crop.png
+    - assets/fertilizer.png
+    - assets/drip.png
+    - assets/covercropping.png
+    - assets/plant_bot.png
+    # plant_disease_model.tflite omitted (weights not in repo); disease demo uses Gemini
+    - assets/plant_disease_labels.txt

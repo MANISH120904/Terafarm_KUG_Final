@@ -1,0 +1,143 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:convert';  // for Utf8Encoder
+
+class CarControlPage extends StatefulWidget {
+  @override
+  _CarControlPageState createState() => _CarControlPageState();
+}
+
+class _CarControlPageState extends State<CarControlPage> {
+  BluetoothConnection? _connection;
+  bool _isConnecting = true;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _setupAndConnect();
+  }
+
+  /// 1) Request runtime permissions, then connect.
+  Future<void> _setupAndConnect() async {
+    await _requestPermissions();
+    if (_errorMessage.isEmpty) {
+      _connectToHC05();
+    }
+  }
+
+  /// 2) Handle Android 12+ Bluetooth & location permissions
+  Future<void> _requestPermissions() async {
+    final statuses = await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.locationWhenInUse,
+    ].request();
+
+    if (statuses[Permission.bluetoothScan]     != PermissionStatus.granted ||
+        statuses[Permission.bluetoothConnect]  != PermissionStatus.granted ||
+        statuses[Permission.locationWhenInUse] != PermissionStatus.granted) {
+      setState(() {
+        _isConnecting = false;
+        _errorMessage =
+          'Please grant Bluetooth & location permissions to control the car.';
+      });
+    }
+  }
+
+  Future<void> _connectToHC05() async {
+    setState(() => _isConnecting = true);
+    final address = "00:22:12:02:45:76"; // your HC‑05 MAC
+    try {
+      _connection = await BluetoothConnection.toAddress(address);
+      setState(() {
+        _isConnecting = false;
+        _errorMessage = '';
+      });
+      print('Connected to the car');
+    } catch (e) {
+      setState(() {
+        _isConnecting = false;
+        _errorMessage = 'Failed to connect: $e';
+      });
+      print('Connection error: $e');
+    }
+  }
+
+  void _sendCommand(String cmd) {
+    if (_connection?.isConnected ?? false) {
+      _connection!.output.add(Utf8Encoder().convert(cmd));
+      _connection!.output.allSent;
+      print('Sent: $cmd');
+    }
+  }
+
+  @override
+  void dispose() {
+    _connection?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isConnecting) {
+      return Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    return Scaffold(
+      appBar: AppBar(title: Text('Car Controller')),
+      body: _errorMessage.isNotEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _errorMessage,
+                    style: TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _setupAndConnect,
+                    child: Text('Retry Connection'),
+                  ),
+                ],
+              ),
+            )
+          : Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => _sendCommand('F'),
+                    child: Text('Forward'),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => _sendCommand('L'),
+                        child: Text('Left'),
+                      ),
+                      SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () => _sendCommand('R'),
+                        child: Text('Right'),
+                      ),
+                    ],
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _sendCommand('B'),
+                    child: Text('Backward'),
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _sendCommand('S'),
+                    child: Text('Stop'),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}
