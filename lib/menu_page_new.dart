@@ -5,28 +5,102 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
 import 'account_page.dart';
 import 'home_page.dart';
+import 'services/dev_auth_helper.dart';
 
-class MenuPage extends StatelessWidget {
+class MenuPage extends StatefulWidget {
   const MenuPage({Key? key}) : super(key: key);
 
+  @override
+  State<MenuPage> createState() => _MenuPageState();
+}
+
+class _MenuPageState extends State<MenuPage> {
+  late Future<Map<String, String>> _userDataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _userDataFuture = _fetchUserData();
+  }
+
   Future<Map<String, String>> _fetchUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
-      final username = doc['username'] ?? 'User Name';
-      final profileImage = doc['profileImage'] ?? '';
-      final email = user.email ?? '';
+    try {
+      if (DevAuthHelper.isOffline && DevAuthHelper.offlineProfile != null) {
+        final profile = DevAuthHelper.offlineProfile!;
+        return {
+          'username': profile.displayName.isNotEmpty ? profile.displayName : 'Farmer',
+          'profileImage': '',
+          'email': profile.email,
+        };
+      }
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        return {'username': 'Farmer', 'profileImage': '', 'email': ''};
+      }
+
+      String username = user.displayName ?? '';
+      String profileImage = user.photoURL ?? '';
+      String email = user.email ?? '';
+
+      if (username.isEmpty && email.isNotEmpty) {
+        final localPart = email.split('@').first;
+        if (localPart.isNotEmpty) {
+          username = localPart[0].toUpperCase() + localPart.substring(1);
+        }
+      }
+      if (username.isEmpty) {
+        username = 'Farmer';
+      }
+
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data();
+          if (data != null) {
+            final firestoreName = data['username'] ??
+                data['displayName'] ??
+                data['name'] ??
+                data['fullName'];
+            if (firestoreName != null && firestoreName.toString().trim().isNotEmpty) {
+              username = firestoreName.toString().trim();
+            }
+
+            final firestoreImage = data['profileImage'] ??
+                data['photoURL'] ??
+                data['imageUrl'];
+            if (firestoreImage != null && firestoreImage.toString().trim().isNotEmpty) {
+              profileImage = firestoreImage.toString().trim();
+            }
+
+            final firestoreEmail = data['email'];
+            if (firestoreEmail != null && firestoreEmail.toString().trim().isNotEmpty) {
+              email = firestoreEmail.toString().trim();
+            }
+          }
+        }
+      } catch (firestoreError) {
+        debugPrint('Firestore fetch error in MenuPage: $firestoreError');
+      }
+
       return {
         'username': username,
         'profileImage': profileImage,
         'email': email,
       };
+    } catch (e) {
+      debugPrint('Error in _fetchUserData: $e');
+      final fallbackUser = FirebaseAuth.instance.currentUser;
+      return {
+        'username': fallbackUser?.displayName ?? (fallbackUser?.email?.split('@').first ?? 'Farmer'),
+        'profileImage': fallbackUser?.photoURL ?? '',
+        'email': fallbackUser?.email ?? '',
+      };
     }
-    return {'username': 'User Name', 'profileImage': '', 'email': ''};
   }
 
   void _logout(BuildContext context) async {
@@ -158,142 +232,88 @@ class MenuPage extends StatelessWidget {
                 decoration: const BoxDecoration(color: Colors.transparent),
                 margin: EdgeInsets.zero,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(50),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 3),
+                child: FutureBuilder<Map<String, String>>(
+                  future: _userDataFuture,
+                  builder: (context, snapshot) {
+                    final data = snapshot.data ?? {};
+                    final fallbackUser = FirebaseAuth.instance.currentUser;
+                    final username = (data['username'] != null && data['username']!.isNotEmpty)
+                        ? data['username']!
+                        : (fallbackUser?.displayName?.isNotEmpty == true
+                            ? fallbackUser!.displayName!
+                            : (fallbackUser?.email?.split('@').first ?? loc.userName));
+                    final profileImage = data['profileImage'] ?? fallbackUser?.photoURL ?? '';
+                    final email = data['email'] ?? fallbackUser?.email ?? '';
+
+                    return Row(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(50),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: FutureBuilder<Map<String, String>>(
-                        future: _fetchUserData(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              child: const CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            );
-                          }
-                          if (snapshot.hasError) {
-                            return const CircleAvatar(
-                              radius: 25,
-                              backgroundColor: Colors.white,
-                              child: Icon(
-                                Icons.account_circle,
-                                size: 30,
-                                color: Color(0xFF246B40),
-                              ),
-                            );
-                          }
-                          final profileImage = snapshot.data?['profileImage'] ?? '';
-                          return profileImage.isNotEmpty
+                          child: profileImage.isNotEmpty
                               ? CircleAvatar(
-                                radius: 25,
-                                backgroundImage: NetworkImage(profileImage),
-                              )
+                                  radius: 25,
+                                  backgroundImage: NetworkImage(profileImage),
+                                )
                               : const CircleAvatar(
-                                radius: 25,
-                                backgroundColor: Colors.white,
-                                child: Icon(
-                                  Icons.account_circle,
-                                  size: 30,
-                                  color: Color(0xFF246B40),
+                                  radius: 25,
+                                  backgroundColor: Colors.white,
+                                  child: Icon(
+                                    Icons.account_circle,
+                                    size: 32,
+                                    color: Color(0xFF246B40),
+                                  ),
                                 ),
-                              );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          FutureBuilder<Map<String, String>>(
-                            future: _fetchUserData(),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                return Container(
-                                  width: 100,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                );
-                              }
-                              if (snapshot.hasError) {
-                                return Text(
-                                  loc.error,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
-                                );
-                              }
-                              return Text(
-                                snapshot.data?['username'] ?? loc.userName,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                username.isNotEmpty ? username : loc.userName,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 0.5,
                                 ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 4),
-                          FutureBuilder<Map<String, String>>(
-                            future: _fetchUserData(),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                return Container(
-                                  width: 120,
-                                  height: 12,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(6),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (email.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  email,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                );
-                              }
-                              if (snapshot.hasError) {
-                                return const SizedBox.shrink();
-                              }
-                              return Text(
-                                snapshot.data?['email'] ?? "",
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              );
-                            },
+                              ],
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),

@@ -397,7 +397,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "₹${earnings.toStringAsFixed(2)}",
+                        "\u20B9${earnings.toStringAsFixed(2)}",
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -882,7 +882,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       DataCell(Text((idx++).toString())),
                       DataCell(Text(p['cropName'] ?? '')),
                       DataCell(Text("${p['stock in kgs'] ?? ''} Kg")),
-                      DataCell(Text("₹${p['pricePerKg'] ?? ''}")),
+                      DataCell(Text("\u20B9${p['pricePerKg'] ?? ''}")),
                     ]));
                   }
                 }

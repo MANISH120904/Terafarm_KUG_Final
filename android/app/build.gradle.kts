@@ -21,6 +21,7 @@ dependencies {
   // TensorFlow Lite dependencies
   implementation("org.tensorflow:tensorflow-lite:2.13.0")
   implementation("org.tensorflow:tensorflow-lite-gpu:2.13.0")
+  implementation("org.tensorflow:tensorflow-lite-gpu-api:2.13.0")
   implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
   
   // Desugaring support for Java 8+ features used by plugins
@@ -68,6 +69,10 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }

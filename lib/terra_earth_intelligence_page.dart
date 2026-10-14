@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmap;
@@ -743,7 +743,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Scientific analysis shows your ${_farmArea.toStringAsFixed(2)} hectare $_cropType farm can sequester ${totalCarbonPotential.toStringAsFixed(1)} tons COâ‚‚ annually through optimized practices',
         'impact': 'High',
         'action': 'Plant $optimalTrees native trees in strategic locations and implement cover cropping',
-        'benefit': 'Generate â‚¹${carbonCreditsValue.toStringAsFixed(0)} annually from verified carbon credits',
+        'benefit': 'Generate \u20B9${carbonCreditsValue.toStringAsFixed(0)} annually from verified carbon credits',
         'co2Reduction': totalCarbonPotential,
         'icon': Icons.eco,
         'color': Colors.green,
@@ -756,7 +756,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Legume-based cover crops optimized for your soil type and climate zone',
         'impact': 'Medium',
         'action': 'Plant nitrogen-fixing crops: ${_getOptimalCoverCrops()} during off-season',
-        'benefit': 'Increase soil organic carbon by 0.3-0.5% and save â‚¹${(_farmArea * 12000).toStringAsFixed(0)} on fertilizers',
+        'benefit': 'Increase soil organic carbon by 0.3-0.5% and save \u20B9${(_farmArea * 12000).toStringAsFixed(0)} on fertilizers',
         'co2Reduction': _farmArea * 2.8,
         'icon': Icons.grass,
         'color': Colors.brown,
@@ -769,7 +769,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'GPS-guided equipment and variable rate technology reduce emissions by 25-35%',
         'impact': 'High',
         'action': 'Implement precision fertilizer application and optimized tillage patterns',
-        'benefit': 'Reduce input costs by â‚¹${(_farmArea * 8500).toStringAsFixed(0)} while cutting emissions',
+        'benefit': 'Reduce input costs by \u20B9${(_farmArea * 8500).toStringAsFixed(0)} while cutting emissions',
         'co2Reduction': _farmArea * 1.9,
         'icon': Icons.precision_manufacturing,
         'color': Colors.blue,
@@ -822,8 +822,8 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
   }
 
   double _getCarbonCreditPrice() {
-    // Current verified carbon credit prices in India (â‚¹ per ton COâ‚‚)
-    return 1800 + Random().nextDouble() * 400; // â‚¹1800-2200 per ton
+    // Current verified carbon credit prices in India (\u20B9 per ton CO2)
+    return 1800 + Random().nextDouble() * 400; // \u20B91800-2200 per ton
   }
 
   String _getOptimalCoverCrops() {
@@ -853,7 +853,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Scientific habitat modeling shows ${optimalPollinatorArea.toStringAsFixed(2)} hectares of native wildflower corridors will boost $_cropType yield by 28-35%',
         'impact': 'High',
         'action': 'Plant native species: ${_getNativePollinatorPlants()} in strategic 3-meter wide strips',
-        'benefit': 'Increase crop yield worth â‚¹${_calculatePollinatorYieldValue().toStringAsFixed(0)} annually',
+        'benefit': 'Increase crop yield worth \u20B9${_calculatePollinatorYieldValue().toStringAsFixed(0)} annually',
         'biodiversityBoost': 0.42,
         'icon': Icons.local_florist,
         'color': Colors.orange,
@@ -863,10 +863,10 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
       },
       {
         'title': 'Avian Pest Control Network',
-        'description': 'Habitat analysis indicates potential for $expectedBirdSpecies bird species providing â‚¹${pestControlValue.toStringAsFixed(0)} worth of natural pest control',
+        'description': 'Habitat analysis indicates potential for $expectedBirdSpecies bird species providing \u20B9${pestControlValue.toStringAsFixed(0)} worth of natural pest control',
         'impact': 'High',
         'action': 'Install ${_calculateOptimalNestBoxes()} nest boxes and maintain 2 water points per hectare',
-        'benefit': 'Reduce pesticide costs by 65-75%, saving â‚¹${(_farmArea * 4200).toStringAsFixed(0)}',
+        'benefit': 'Reduce pesticide costs by 65-75%, saving \u20B9${(_farmArea * 4200).toStringAsFixed(0)}',
         'biodiversityBoost': 0.38,
         'icon': Icons.pets,
         'color': Colors.teal,
@@ -879,7 +879,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Micro-habitat creation for beneficial insects optimized for $_cropType pest management',
         'impact': 'High',
         'action': 'Establish ${_getBeneficialInsectPlants()} and maintain undisturbed refugia areas',
-        'benefit': 'Achieve 70-80% natural pest suppression, worth â‚¹${(_farmArea * 5800).toStringAsFixed(0)}',
+        'benefit': 'Achieve 70-80% natural pest suppression, worth \u20B9${(_farmArea * 5800).toStringAsFixed(0)}',
         'biodiversityBoost': 0.45,
         'icon': Icons.bug_report,
         'color': Colors.purple,
@@ -992,7 +992,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Soil analysis indicates ${currentOrganicMatter.toStringAsFixed(1)}% organic matter. Targeting ${targetOrganicMatter.toStringAsFixed(1)}% for optimal $_cropType production',
         'impact': 'High',
         'action': 'Apply ${_getOptimalCompostAmount()} tons of verified compost + biochar blend per hectare',
-        'benefit': 'Increase yield by ${yieldIncreaseKg.toStringAsFixed(0)}kg worth â‚¹${_calculateSoilImprovementValue().toStringAsFixed(0)}',
+        'benefit': 'Increase yield by ${yieldIncreaseKg.toStringAsFixed(0)}kg worth \u20B9${_calculateSoilImprovementValue().toStringAsFixed(0)}',
         'soilImprovement': 0.52,
         'icon': Icons.agriculture,
         'color': Colors.brown,
@@ -1005,7 +1005,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'No-till system reduces soil compaction and increases water infiltration by 40-60% on your farm',
         'impact': 'High',
         'action': 'Implement strip-tillage with cover crop integration and controlled traffic patterns',
-        'benefit': 'Save â‚¹${soilErosionSavings.toStringAsFixed(0)} from reduced erosion + â‚¹${(_farmArea * 7200).toStringAsFixed(0)} operational costs',
+        'benefit': 'Save \u20B9${soilErosionSavings.toStringAsFixed(0)} from reduced erosion + \u20B9${(_farmArea * 7200).toStringAsFixed(0)} operational costs',
         'soilImprovement': 0.39,
         'icon': Icons.eco,
         'color': Colors.green,
@@ -1018,7 +1018,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Site-specific fertilizer recommendations based on soil testing and crop requirements',
         'impact': 'High',
         'action': 'Apply variable-rate NPK: ${_getOptimalNPKRatio()} based on grid soil sampling',
-        'benefit': 'Optimize fertilizer efficiency, save â‚¹${(_farmArea * 6800).toStringAsFixed(0)} while boosting yield 12-18%',
+        'benefit': 'Optimize fertilizer efficiency, save \u20B9${(_farmArea * 6800).toStringAsFixed(0)} while boosting yield 12-18%',
         'soilImprovement': 0.44,
         'icon': Icons.science,
         'color': Colors.indigo,
@@ -1081,7 +1081,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
   double _calculateErosionPreventionValue() {
     // Economic value of preventing soil erosion
     double erosionRate = _farmArea * 2.5; // tons/hectare/year typical loss
-    double soilValue = 1500; // â‚¹ per ton of fertile soil
+    double soilValue = 1500; // \u20B9 per ton of fertile soil
     return erosionRate * soilValue * 0.7; // 70% erosion prevention
   }
 
@@ -1146,7 +1146,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Water requirement analysis: ${dailyWaterNeed.toStringAsFixed(0)} liters/day. Current efficiency: ${(currentEfficiency * 100).toStringAsFixed(1)}%',
         'impact': 'High',
         'action': 'Install ${_getOptimalIrrigationType()} with soil moisture sensors and weather integration',
-        'benefit': 'Save ${waterSavingsPotential.toStringAsFixed(0)} liters daily, worth â‚¹${_calculateWaterSavingsValue().toStringAsFixed(0)}',
+        'benefit': 'Save ${waterSavingsPotential.toStringAsFixed(0)} liters daily, worth \u20B9${_calculateWaterSavingsValue().toStringAsFixed(0)}',
         'waterSavings': 0.47,
         'icon': Icons.water_drop,
         'color': Colors.blue,
@@ -1159,7 +1159,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Catchment analysis shows potential to harvest ${rainwaterPotential.toStringAsFixed(0)} liters annually',
         'impact': 'High',
         'action': 'Construct ${_getOptimalPondSize()} farm pond with filtration and ${_getOptimalChannelLength()} collection channels',
-        'benefit': 'Achieve water independence + save â‚¹${(_farmArea * 15000).toStringAsFixed(0)} on irrigation costs',
+        'benefit': 'Achieve water independence + save \u20B9${(_farmArea * 15000).toStringAsFixed(0)} on irrigation costs',
         'waterSavings': 0.38,
         'icon': Icons.water,
         'color': Colors.cyan,
@@ -1172,7 +1172,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
         'description': 'Drought-resistant varieties and mulching reduce water needs by 30-35%',
         'impact': 'High',
         'action': 'Adopt ${_getDroughtResistantVarieties()} + organic mulching system',
-        'benefit': 'Maintain 95% yield with 35% less water, save â‚¹${(_farmArea * 8500).toStringAsFixed(0)}',
+        'benefit': 'Maintain 95% yield with 35% less water, save \u20B9${(_farmArea * 8500).toStringAsFixed(0)}',
         'waterSavings': 0.33,
         'icon': Icons.local_florist,
         'color': Colors.amber,
@@ -1268,7 +1268,7 @@ class _TerraEarthIntelligencePageState extends State<TerraEarthIntelligencePage>
 
   double _calculateWaterSavingsValue() {
     // Economic value of water savings
-    double waterCostPerLiter = 0.03; // â‚¹0.03 per liter average
+    double waterCostPerLiter = 0.03; // \u20B90.03 per liter average
     double dailySavings = _calculateAccurateWaterNeeds() * 0.45;
     return dailySavings * waterCostPerLiter * 365; // Annual savings
   }
