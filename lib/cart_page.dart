@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:latlong2/latlong.dart';
-import 'address_map_picker.dart';
+import 'buyer/my_orders_page.dart';
+import 'services/order_service.dart';
 import 'theme/tera_farm_theme.dart';
 import 'widgets/tera_farm_scaffold.dart';
 
@@ -17,71 +16,32 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  String _deliveryMethod = 'delivery';
-  final int _deliveryFee = 30;
-  String _deliveryAddress = 'Select delivery address';
-  double? _deliveryLat;
-  double? _deliveryLng;
+  String _paymentMethod = PaymentMethods.cod;
   bool _paying = false;
+  String? _resolvedUpi;
+  String? _payeeName;
+  bool _loadingUpi = false;
 
   @override
   void initState() {
     super.initState();
-    _loadUserLocation();
+    _prefetchSellerUpi();
   }
 
-  Future<void> _loadUserLocation() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
-    if (!userDoc.exists) return;
-    final data = userDoc.data() ?? {};
-    final location = data['location'];
-    if (location is Map) {
+  Future<void> _prefetchSellerUpi() async {
+    if (widget.cartItems.isEmpty) return;
+    setState(() => _loadingUpi = true);
+    try {
+      final sellerId = (widget.cartItems.first['sellerId'] ?? '').toString();
+      final payment = await _resolveSellerPayment(sellerId);
+      if (!mounted) return;
       setState(() {
-        _deliveryAddress =
-            (location['address'] as String?)?.trim().isNotEmpty == true
-                ? location['address'] as String
-                : _deliveryAddress;
-        _deliveryLat = (location['latitude'] as num?)?.toDouble();
-        _deliveryLng = (location['longitude'] as num?)?.toDouble();
+        _resolvedUpi = payment?['upiId'];
+        _payeeName = payment?['payeeName'];
       });
+    } finally {
+      if (mounted) setState(() => _loadingUpi = false);
     }
-  }
-
-  Future<void> _openMapPicker() async {
-    final initialLocation = (_deliveryLat != null && _deliveryLng != null)
-        ? LatLng(_deliveryLat!, _deliveryLng!)
-        : const LatLng(13.0827, 80.2707);
-
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AddressMapPicker(initialLocation: initialLocation),
-      ),
-    );
-
-    if (result == null) return;
-    setState(() {
-      _deliveryAddress = result['address'] as String;
-      _deliveryLat = result['lat'] as double;
-      _deliveryLng = result['lng'] as double;
-    });
-
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
-    await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
-      'u_id': currentUser.uid,
-      'location': {
-        'address': _deliveryAddress,
-        'latitude': _deliveryLat,
-        'longitude': _deliveryLng,
-      },
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
   }
 
   void _emptyCart() {
@@ -102,6 +62,9 @@ class _CartPageState extends State<CartPage> {
         widget.cartItems[index]['quantity'] = currentQty - 1;
       } else {
         widget.cartItems.removeAt(index);
+        if (widget.cartItems.isEmpty) {
+          _resolvedUpi = null;
+        }
       }
     });
   }
@@ -121,10 +84,8 @@ class _CartPageState extends State<CartPage> {
     return total;
   }
 
-  int get _totalPayable =>
-      _deliveryMethod == 'delivery' ? _itemTotal + _deliveryFee : _itemTotal;
+  int get _totalPayable => _itemTotal;
 
-  /// Farms save `upiId`; older docs may use `upi_id` / `upi`.
   String? _readUpiFromMap(Map<String, dynamic> data) {
     for (final key in ['upiId', 'upi_id', 'upi', 'UPI', 'upiID']) {
       final value = data[key];
@@ -136,6 +97,7 @@ class _CartPageState extends State<CartPage> {
   }
 
   Future<Map<String, String>?> _resolveSellerPayment(String sellerId) async {
+    if (sellerId.isEmpty || sellerId == 'unknown') return null;
     final farms = await FirebaseFirestore.instance
         .collection('farms')
         .where('sellerId', isEqualTo: sellerId)
@@ -186,14 +148,17 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-  Future<void> _confirmOrder() async {
+  Future<void> _placeOrder() async {
     if (widget.cartItems.isEmpty || _paying) return;
 
-    if (_deliveryMethod == 'delivery' &&
-        (_deliveryAddress.trim().isEmpty ||
-            _deliveryAddress == 'Select delivery address')) {
+    if (_paymentMethod == PaymentMethods.upi &&
+        (_resolvedUpi == null || _resolvedUpi!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please set a delivery address')),
+        const SnackBar(
+          content: Text(
+            'This farm has no UPI ID. Choose Cash on Pickup or ask the farmer to add UPI.',
+          ),
+        ),
       );
       return;
     }
@@ -205,105 +170,89 @@ class _CartPageState extends State<CartPage> {
         throw Exception('Seller information missing on cart items');
       }
 
-      // 1) Resolve farmer UPI before creating the order.
-      final payment = await _resolveSellerPayment(sellerId);
-      if (payment == null) {
+      final txnRef = 'TF${DateTime.now().millisecondsSinceEpoch}';
+      final cartCopy =
+          List<Map<String, dynamic>>.from(widget.cartItems.map((e) => Map<String, dynamic>.from(e)));
+
+      final orderRef = await OrderService.instance.createPickupOrder(
+        cartItems: cartCopy,
+        sellerId: sellerId,
+        paymentMethod: _paymentMethod,
+        itemTotal: _itemTotal,
+        totalPayable: _totalPayable,
+        sellerUpiId: _resolvedUpi,
+        transactionRef: txnRef,
+      );
+
+      setState(() => widget.cartItems.clear());
+
+      if (_paymentMethod == PaymentMethods.upi) {
+        final amount = _totalPayable.toStringAsFixed(2);
+        final payee = _payeeName ?? 'TeraFarm Seller';
+        await _launchUpiPayment(
+          upiId: _resolvedUpi!,
+          payeeName: payee,
+          amount: amount,
+          txnRef: txnRef,
+          note: 'TeraFarm order $txnRef',
+        );
+
+        if (!mounted) return;
+        final claimed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('UPI payment'),
+            content: Text(
+              'Complete ₹$amount to $payee (${_resolvedUpi!}) in your UPI app.\n\n'
+              'Your order stays unpaid until the farmer confirms the payment.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('I will pay later'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('I paid'),
+              ),
+            ],
+          ),
+        );
+
+        if (claimed == true) {
+          await OrderService.instance.buyerClaimUpiPaid(orderRef.id);
+        }
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'This farm has not added a UPI ID yet. Ask the farmer to update it.',
+              'Order saved. Waiting for farmer to confirm UPI payment.',
             ),
+            behavior: SnackBarBehavior.floating,
           ),
         );
-        return;
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order placed — Cash on Pickup. Pay when you collect.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
 
-      final upiId = payment['upiId']!;
-      final payeeName = payment['payeeName']!;
-      final txnRef = 'TF${DateTime.now().millisecondsSinceEpoch}';
-      final buyerId = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
-
-      // 2) Create order as awaiting payment (standard checkout pattern).
-      final orderRef = await FirebaseFirestore.instance.collection('orders').add({
-        'cartItems': List<Map<String, dynamic>>.from(widget.cartItems),
-        'deliveryMethod': _deliveryMethod,
-        'itemTotal': _itemTotal,
-        'deliveryFee': _deliveryMethod == 'delivery' ? _deliveryFee : 0,
-        'totalPayable': _totalPayable,
-        'status': 'pending',
-        'paymentStatus': 'awaiting_payment',
-        'paymentMethod': 'upi',
-        'sellerUpiId': upiId,
-        'transactionRef': txnRef,
-        'orderDate': DateTime.now().toIso8601String(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'buyerId': buyerId,
-        'sellerId': sellerId,
-        'deliveryAddress':
-            _deliveryMethod == 'delivery' ? _deliveryAddress : null,
-        'deliveryLat': _deliveryMethod == 'delivery' ? _deliveryLat : null,
-        'deliveryLng': _deliveryMethod == 'delivery' ? _deliveryLng : null,
-      });
-
-      final amount = _totalPayable.toStringAsFixed(2);
-      setState(() => widget.cartItems.clear());
-
-      // 3) Open any installed UPI app with farmer's VPA.
-      await _launchUpiPayment(
-        upiId: upiId,
-        payeeName: payeeName,
-        amount: amount,
-        txnRef: txnRef,
-        note: 'TeraFarm order $txnRef',
-      );
-
       if (!mounted) return;
-
-      // 4) Confirm payment result (UPI intent does not return a reliable callback).
-      final paid = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Payment status'),
-          content: Text(
-            'Complete ₹$amount to $payeeName ($upiId) in your UPI app, then confirm below.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Not paid yet'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('I paid'),
-            ),
-          ],
-        ),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MyOrdersPage()),
       );
-
-      await orderRef.update({
-        'paymentStatus': paid == true ? 'paid' : 'awaiting_payment',
-        'paidAt': paid == true ? FieldValue.serverTimestamp() : null,
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            paid == true
-                ? 'Order placed. Payment marked as paid.'
-                : 'Order placed. Pay later via UPI if needed — seller can confirm.',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      Navigator.of(context).maybePop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not complete checkout: $e')),
+        SnackBar(content: Text('Could not place order: $e')),
       );
     } finally {
       if (mounted) setState(() => _paying = false);
@@ -423,14 +372,10 @@ class _CartPageState extends State<CartPage> {
                                         color: TeraFarmColors.primaryDark,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      unit,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
+                                    Text(unit,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600)),
                                     const SizedBox(height: 6),
                                     Text(
                                       '₹$price each',
@@ -451,19 +396,20 @@ class _CartPageState extends State<CartPage> {
                                   children: [
                                     IconButton(
                                       visualDensity: VisualDensity.compact,
-                                      onPressed: () => _decrementQuantity(index),
-                                      icon: const Icon(Icons.remove_circle_outline),
+                                      onPressed: () =>
+                                          _decrementQuantity(index),
+                                      icon: const Icon(
+                                          Icons.remove_circle_outline),
                                     ),
-                                    Text(
-                                      '$quantity',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                    Text('$quantity',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w700)),
                                     IconButton(
                                       visualDensity: VisualDensity.compact,
-                                      onPressed: () => _incrementQuantity(index),
-                                      icon: const Icon(Icons.add_circle_outline),
+                                      onPressed: () =>
+                                          _incrementQuantity(index),
+                                      icon: const Icon(
+                                          Icons.add_circle_outline),
                                     ),
                                   ],
                                 ),
@@ -474,57 +420,80 @@ class _CartPageState extends State<CartPage> {
                       }),
                       const SizedBox(height: 8),
                       _sectionCard(
-                        title: 'Delivery',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        title: 'Fulfillment',
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _methodChip(
-                                    label: 'Home delivery',
-                                    selected: _deliveryMethod == 'delivery',
-                                    onTap: () => setState(
-                                      () => _deliveryMethod = 'delivery',
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _methodChip(
-                                    label: 'Pickup',
-                                    selected: _deliveryMethod == 'pickup',
-                                    onTap: () => setState(
-                                      () => _deliveryMethod = 'pickup',
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Expanded(
+                              child: _methodChip(
+                                label: 'Pickup',
+                                selected: true,
+                                onTap: () {},
+                              ),
                             ),
-                            if (_deliveryMethod == 'delivery') ...[
-                              const SizedBox(height: 12),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Stack(
+                                clipBehavior: Clip.none,
                                 children: [
-                                  const Icon(
-                                    Icons.location_on,
-                                    color: TeraFarmColors.farmerGreen,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _deliveryAddress,
-                                      style: const TextStyle(fontSize: 13),
+                                  Opacity(
+                                    opacity: 0.45,
+                                    child: _methodChip(
+                                      label: 'Delivery',
+                                      selected: false,
+                                      onTap: null,
                                     ),
                                   ),
-                                  TextButton(
-                                    onPressed: _openMapPicker,
-                                    child: const Text('Change'),
+                                  Positioned(
+                                    top: -6,
+                                    right: -4,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.shade700,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'Not available yet',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _sectionCard(
+                        title: 'Payment',
+                        child: Column(
+                          children: [
+                            _paymentTile(
+                              value: PaymentMethods.cod,
+                              title: 'Cash on Pickup (COD)',
+                              subtitle: 'Pay the farmer when you collect',
+                              icon: Icons.payments_outlined,
+                            ),
+                            const SizedBox(height: 8),
+                            _paymentTile(
+                              value: PaymentMethods.upi,
+                              title: 'Pay via UPI',
+                              subtitle: _loadingUpi
+                                  ? 'Checking farmer UPI…'
+                                  : (_resolvedUpi != null
+                                      ? 'Pay to $_resolvedUpi'
+                                      : 'Farmer UPI not set'),
+                              icon: Icons.account_balance_wallet_outlined,
+                              enabled: _resolvedUpi != null,
+                            ),
                           ],
                         ),
                       ),
@@ -535,37 +504,19 @@ class _CartPageState extends State<CartPage> {
                           children: [
                             _billRow('Item total', '₹$_itemTotal'),
                             const SizedBox(height: 6),
-                            _billRow(
-                              'Delivery fee',
-                              _deliveryMethod == 'delivery'
-                                  ? '₹$_deliveryFee'
-                                  : '₹0',
-                            ),
+                            _billRow('Delivery fee', '₹0 (pickup)'),
                             const Divider(height: 20),
-                            _billRow(
-                              'Total payable',
-                              '₹$_totalPayable',
-                              bold: true,
-                            ),
+                            _billRow('Total payable', '₹$_totalPayable',
+                                bold: true),
                             const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.account_balance_wallet_outlined,
-                                  size: 16,
-                                  color: Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'Pay securely to the farmer\'s UPI ID',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              _paymentMethod == PaymentMethods.upi
+                                  ? 'UPI orders stay unpaid until the farmer confirms payment.'
+                                  : 'COD: pay in cash when you pick up the produce.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
                           ],
                         ),
@@ -589,7 +540,7 @@ class _CartPageState extends State<CartPage> {
                       ],
                     ),
                     child: FilledButton.icon(
-                      onPressed: _paying ? null : _confirmOrder,
+                      onPressed: _paying ? null : _placeOrder,
                       icon: _paying
                           ? const SizedBox(
                               width: 18,
@@ -599,11 +550,15 @@ class _CartPageState extends State<CartPage> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(Icons.currency_rupee),
+                          : Icon(_paymentMethod == PaymentMethods.upi
+                              ? Icons.currency_rupee
+                              : Icons.storefront_outlined),
                       label: Text(
                         _paying
-                            ? 'Opening UPI…'
-                            : 'Pay ₹$_totalPayable with UPI',
+                            ? 'Placing order…'
+                            : (_paymentMethod == PaymentMethods.upi
+                                ? 'Pay ₹$_totalPayable with UPI'
+                                : 'Place COD order · ₹$_totalPayable'),
                       ),
                       style: FilledButton.styleFrom(
                         backgroundColor: TeraFarmColors.primary,
@@ -617,6 +572,66 @@ class _CartPageState extends State<CartPage> {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _paymentTile({
+    required String value,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    bool enabled = true,
+  }) {
+    final selected = _paymentMethod == value;
+    return Material(
+      color: selected ? TeraFarmColors.sage : Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: !enabled
+            ? null
+            : () => setState(() => _paymentMethod = value),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(icon,
+                  color: enabled
+                      ? TeraFarmColors.primary
+                      : Colors.grey.shade400),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: enabled ? Colors.black87 : Colors.grey,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Radio<String>(
+                value: value,
+                groupValue: _paymentMethod,
+                onChanged: !enabled
+                    ? null
+                    : (v) => setState(() => _paymentMethod = v!),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -656,7 +671,7 @@ class _CartPageState extends State<CartPage> {
   Widget _methodChip({
     required String label,
     required bool selected,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
   }) {
     return Material(
       color: selected ? TeraFarmColors.sage : Colors.grey.shade100,

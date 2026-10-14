@@ -10,6 +10,8 @@ import 'Community_page.dart';
 import 'shop_page.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/app_locales.dart';
+import 'location.dart';
+import 'utils/farm_distance.dart';
 import 'main.dart' show LocaleProvider;
 class BuyersPage extends StatefulWidget {
   const BuyersPage({super.key});
@@ -20,6 +22,7 @@ class BuyersPage extends StatefulWidget {
 
 class _BuyersPageState extends State<BuyersPage> {
   int _selectedIndex = 2;
+  double _radiusKm = 5;
 
   void _onNavItemTapped(int index) {
     Widget? dest;
@@ -157,10 +160,51 @@ class _BuyersPageState extends State<BuyersPage> {
               ),
               IconButton(
                 icon: Icon(Icons.filter_list, color: Colors.grey.shade700),
-                onPressed: () {},
+                tooltip: 'Adjust radius',
+                onPressed: () async {
+                  final value = await showModalBottomSheet<double>(
+                    context: context,
+                    builder: (ctx) {
+                      var temp = _radiusKm;
+                      return StatefulBuilder(
+                        builder: (ctx, setModal) => Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Search radius: ${temp.round()} km',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700, fontSize: 16),
+                              ),
+                              Slider(
+                                value: temp,
+                                min: 5,
+                                max: 100,
+                                divisions: 19,
+                                label: '${temp.round()} km',
+                                onChanged: (v) => setModal(() => temp = v),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(ctx, temp),
+                                child: const Text('Apply'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                  if (value != null) setState(() => _radiusKm = value);
+                },
               ),
             ],
           ),
+          Text(
+            'Showing farms within ${_radiusKm.round()} km',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 8),
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('farms')
@@ -180,18 +224,41 @@ class _BuyersPageState extends State<BuyersPage> {
                   child: Text(loc.noFarmsFound),
                 );
               }
+              if (LocationService().currentPosition == null) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Text(
+                    'Set your location to see nearby farms.',
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
+                );
+              }
+              final nearby = farmsWithinRadius(
+                docs: docs,
+                radiusKm: _radiusKm,
+              );
+              if (nearby.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Text(
+                    'No farms within ${_radiusKm.round()} km.',
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
+                );
+              }
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: docs.length,
+                itemCount: nearby.length,
                 itemBuilder: (_, i) {
-                  final farm = docs[i].data()! as Map<String, dynamic>;
+                  final entry = nearby[i];
+                  final farm = entry.doc.data()! as Map<String, dynamic>;
                   return GestureDetector(
                     onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder: (_) =>
-                                ProductPage(farmId: docs[i].id))),
+                                ProductPage(farmId: entry.doc.id))),
                     child: Card(
                       margin: const EdgeInsets.only(bottom: 15),
                       shape: RoundedRectangleBorder(
@@ -213,10 +280,24 @@ class _BuyersPageState extends State<BuyersPage> {
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(farm['farmName'] ?? loc.unnamedFarm,
-                                      style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold)),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                            farm['farmName'] ?? loc.unnamedFarm,
+                                            style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold)),
+                                      ),
+                                      Text(
+                                        formatDistanceKm(entry.distanceKm),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF15803D),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   const SizedBox(height: 5),
                                   Text(farm['farmDescription'] ?? loc.noDescription,
                                       style: TextStyle(

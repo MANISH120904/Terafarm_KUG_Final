@@ -326,8 +326,11 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   }
 
   bool _orderCountsAsEarning(Map<String, dynamic> data) {
-    final status = (data['status'] ?? 'pending').toString().toLowerCase();
-    return status != 'rejected' && status != 'cancelled';
+    // Only count verified paid amounts (UPI seller-confirmed or COD after handover).
+    final ps = (data['paymentStatus'] ?? '').toString();
+    final status = (data['status'] ?? '').toString();
+    if (status == 'rejected' || status == 'cancelled') return false;
+    return ps == 'paid';
   }
 
   Widget _buildEarningsCard(AppLocalizations loc) {

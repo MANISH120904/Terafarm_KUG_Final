@@ -1044,41 +1044,13 @@ INSTRUCTIONS:
       };
       
       List<Map<String, dynamic>> cartItems = [cartItem];
-      
-      // Calculate total
-      int total = price * qty;
-      int deliveryFee = 30;
-      int totalPayable = total + deliveryFee;
-      
-      print("💰 Order total: ₹$total + ₹$deliveryFee delivery = ₹$totalPayable");
+
       print("🏪 Farm: ${farmName ?? 'Unknown'} (ID: $farmId)");
-      
-      // Save order to Firestore with farm information
-      print("💾 Saving order to Firestore...");
-      _updateStatus("Processing order...");
-      
-      DocumentReference orderRef = await FirebaseFirestore.instance
-          .collection('orders')
-          .add({
-        'cartItems': cartItems,
-        'deliveryMethod': 'delivery',
-        'itemTotal': total,
-        'deliveryFee': deliveryFee,
-        'totalPayable': totalPayable,
-        'status': 'pending',
-        'orderDate': DateTime.now().toIso8601String(),
-        'buyerId': FirebaseAuth.instance.currentUser?.uid ?? 'unknown',
-        'sellerId': sellerId,
-        'farmId': farmId,
-        'farmName': farmName ?? 'Unknown Farm',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      
-      print("✅ Order saved with ID: ${orderRef.id}");
-      
-      // Navigate to cart page with the items
+      print("🛒 Opening cart for checkout (order not created until payment/COD)");
+      _updateStatus("Opening cart…");
+
+      // Do NOT write Firestore orders here — checkout + payment live in CartPage.
       if (_currentContext != null) {
-        print("🛒 Opening cart page...");
         Navigator.push(
           _currentContext!,
           MaterialPageRoute(
@@ -1086,10 +1058,9 @@ INSTRUCTIONS:
           ),
         );
       }
-      
-      // Speak confirmation
+
       _speak(_getLocalizedMessage('order_placed_successfully'));
-      _updateStatus("Order placed successfully!");
+      _updateStatus("Cart ready — complete pickup checkout");
       
     } catch (e) {
       print("❌ Error in cart processing: $e");

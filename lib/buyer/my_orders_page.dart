@@ -1,496 +1,390 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:TeraFarm/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/order_service.dart';
+import '../theme/tera_farm_theme.dart';
+import '../widgets/order_chat_sheet.dart';
+import '../widgets/tera_farm_scaffold.dart';
 
 class MyOrdersPage extends StatelessWidget {
   const MyOrdersPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
-    // Fetch current buyer's orders from Firestore - only orders that are not delivered yet
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
-        appBar: AppBar(
-          title: Text(loc.myOrders),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-        ),
-        body: Center(child: Text(loc.error, style: TextStyle(color: Colors.grey.shade700))),
+      return TeraFarmScaffold(
+        mode: TeraFarmScaffoldMode.inner,
+        title: 'My Orders',
+        body: const Center(child: Text('Please sign in')),
       );
     }
+
+    // Avoid composite index requirement: filter client-side after buyerId query.
     final orderStream = FirebaseFirestore.instance
         .collection('orders')
         .where('buyerId', isEqualTo: user.uid)
-        .where('status', whereIn: ['pending', 'confirmed', 'preparing', 'ready'])
         .snapshots();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(
-          'Your Orders',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        centerTitle: false,
-      ),
+    return TeraFarmScaffold(
+      mode: TeraFarmScaffoldMode.inner,
+      title: 'My Orders',
+      backgroundColor: TeraFarmColors.surface,
       body: StreamBuilder<QuerySnapshot>(
         stream: orderStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-                  ),
-                  SizedBox(height: 16),
-                  Text('Loading your orders...', style: TextStyle(color: Colors.grey.shade600)),
-                ],
-              ),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 80,
-                    color: Colors.grey.shade300,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'No pending orders',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Your active orders will appear here',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            );
+            return _empty('No orders yet');
           }
-          final orders = snapshot.data!.docs;
-          return ListView.separated(
-            padding: EdgeInsets.all(16),
-            itemCount: orders.length,
-            separatorBuilder: (context, index) => SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final doc = orders[index];
-              final data = doc.data() as Map<String, dynamic>;
-              final status = data['status'] ?? 'pending';
-              return FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('farms')
-                    .where('sellerId', isEqualTo: data['sellerId'])
-                    .limit(1)
-                    .get()
-                    .then((q) => q.docs.first),
-                builder: (context, farmSnap) {
-                  if (!farmSnap.hasData) {
-                    return SizedBox.shrink();
-                  }
-                  final farmData = farmSnap.data!.data() as Map<String, dynamic>;
-                  final farmName = farmData['farmName'] ?? 'Unknown Farm';
-                  final contact = farmData['contactNumber'] ?? '';
-                  final cart = data['cartItems'] as List<dynamic>?;
-                  // Extract and join product names to display correctly
-                  final productNames = cart != null && cart.isNotEmpty
-                      ? cart.map((item) => item['name'] ?? '').where((n) => n.isNotEmpty).join(', ')
-                      : 'Order Items';
-                  // Extract order date/time from Firestore
-                  final orderDateStr = data['orderDate'] ?? '';
-                  final totalPayable = data['totalPayable'] ?? 0;
 
-                  return _buildOrderCard(
-                    context,
-                    doc.id,
-                    farmName,
-                    productNames,
-                    status,
-                    orderDateStr,
-                    totalPayable,
-                    contact,
-                    cart ?? [],
-                  );
-                },
-              );
-            },
+          final docs = snapshot.data!.docs.toList()
+            ..sort((a, b) {
+              final ad = _date(a.data() as Map<String, dynamic>);
+              final bd = _date(b.data() as Map<String, dynamic>);
+              return bd.compareTo(ad);
+            });
+
+          for (final d in docs) {
+            final data = d.data() as Map<String, dynamic>;
+            if (data['status'] == OrderStatuses.awaitingPayment) {
+              OrderService.instance.cancelIfUpiExpired(d.id);
+            }
+          }
+
+          final active = docs.where((d) {
+            final s = ((d.data() as Map)['status'] ?? '').toString();
+            return OrderStatuses.activeBuyer.contains(s);
+          }).toList();
+          final history = docs.where((d) {
+            final s = ((d.data() as Map)['status'] ?? '').toString();
+            return OrderStatuses.history.contains(s);
+          }).toList();
+
+          if (active.isEmpty && history.isEmpty) {
+            return _empty('No orders yet');
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Text('Active',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: TeraFarmColors.primaryDark)),
+              const SizedBox(height: 8),
+              if (active.isEmpty)
+                Text('No active orders',
+                    style: TextStyle(color: Colors.grey.shade600))
+              else
+                for (final doc in active) _BuyerOrderCard(doc: doc),
+              const SizedBox(height: 20),
+              const Text('History',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: TeraFarmColors.primaryDark)),
+              const SizedBox(height: 8),
+              if (history.isEmpty)
+                Text('No past orders',
+                    style: TextStyle(color: Colors.grey.shade600))
+              else
+                for (final doc in history) _BuyerOrderCard(doc: doc),
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildOrderCard(
-    BuildContext context,
-    String orderId,
-    String farmName,
-    String productNames,
-    String status,
-    String orderDate,
-    int totalPayable,
-    String contact,
-    List<dynamic> cartItems,
-  ) {
-    // Get status color and display text
-    Color statusColor = _getStatusColor(status);
-    String statusText = _getStatusText(status);
-    IconData statusIcon = _getStatusIcon(status);
+  static DateTime _date(Map<String, dynamic> data) {
+    final raw = data['orderDate'];
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is String) return DateTime.tryParse(raw) ?? DateTime(2000);
+    final c = data['createdAt'];
+    if (c is Timestamp) return c.toDate();
+    return DateTime(2000);
+  }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with farm info and status
-          Container(
-            padding: EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Farm icon
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.agriculture,
-                    color: Colors.green.shade600,
-                    size: 20,
-                  ),
-                ),
-                SizedBox(width: 12),
-                // Farm details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        farmName,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Order #${orderId.substring(0, 8)}...',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Status badge
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(statusIcon, size: 12, color: statusColor),
-                      SizedBox(width: 4),
-                      Text(
-                        statusText,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: statusColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Divider
-          Container(
-            height: 1,
-            color: Colors.grey.shade100,
-            margin: EdgeInsets.symmetric(horizontal: 16),
-          ),
-          
-          // Items list
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Items ordered',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                SizedBox(height: 8),
-                ...cartItems.take(3).map<Widget>((item) {
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade400,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${item['name'] ?? ''} x ${item['quantity'] ?? 1}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                if (cartItems.length > 3)
-                  Text(
-                    '+${cartItems.length - 3} more items',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          
-          // Bottom section with price and QR
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
-              ),
-            ),
-            child: Row(
-              children: [
-                // Price and time info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '₹$totalPayable',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        _formatOrderDate(orderDate),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // QR Code button
-                ElevatedButton.icon(
-                  onPressed: () => _showQRCode(context, orderId),
-                  icon: Icon(Icons.qr_code, size: 18),
-                  label: Text('Show QR'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+  Widget _empty(String text) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.receipt_long_outlined,
+                size: 72, color: Colors.grey.shade300),
+            const SizedBox(height: 12),
+            Text(text,
+                style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500)),
+          ],
+        ),
+      );
+}
+
+class _BuyerOrderCard extends StatelessWidget {
+  const _BuyerOrderCard({required this.doc});
+  final DocumentSnapshot doc;
+
+  Future<void> _payAgain(BuildContext context, Map<String, dynamic> data) async {
+    final upi = (data['sellerUpiId'] ?? '').toString();
+    final amount = (data['totalPayable'] ?? data['itemTotal'] ?? 0).toString();
+    final txn = (data['transactionRef'] ?? doc.id).toString();
+    if (upi.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seller UPI missing')),
+      );
+      return;
+    }
+    final uri = Uri(
+      scheme: 'upi',
+      host: 'pay',
+      queryParameters: {
+        'pa': upi,
+        'pn': 'TeraFarm Seller',
+        'am': amount,
+        'cu': 'INR',
+        'tn': 'TeraFarm order $txn',
+        'tr': txn,
+      },
+    );
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final claimed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('UPI payment'),
+        content: const Text(
+          'After paying, tap I paid. The farmer must still confirm before the order proceeds.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Close')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('I paid')),
         ],
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return Colors.orange;
-      case 'confirmed':
-        return Colors.blue;
-      case 'preparing':
-        return Colors.purple;
-      case 'ready':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'Order Placed';
-      case 'confirmed':
-        return 'Confirmed';
-      case 'preparing':
-        return 'Preparing';
-      case 'ready':
-        return 'Ready for Pickup';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return Icons.access_time;
-      case 'confirmed':
-        return Icons.check_circle_outline;
-      case 'preparing':
-        return Icons.restaurant;
-      case 'ready':
-        return Icons.done_all;
-      default:
-        return Icons.help_outline;
-    }
-  }
-
-  String _formatOrderDate(String orderDate) {
-    try {
-      final date = DateTime.parse(orderDate);
-      final now = DateTime.now();
-      final difference = now.difference(date);
-      
-      if (difference.inMinutes < 60) {
-        return '${difference.inMinutes} min ago';
-      } else if (difference.inHours < 24) {
-        return '${difference.inHours} hr ago';
-      } else {
-        return '${difference.inDays} days ago';
+    if (claimed == true) {
+      await OrderService.instance.buyerClaimUpiPaid(doc.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Waiting for farmer to confirm payment'),
+          ),
+        );
       }
-    } catch (e) {
-      return orderDate;
     }
   }
 
-  void _showQRCode(BuildContext context, String orderId) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Order QR Code',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 16),
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: QrImageView(
-                  data: orderId,
-                  version: QrVersions.auto,
-                  size: 200.0,
-                  backgroundColor: Colors.white,
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Show this QR code to the farmer for order verification',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  'Close',
-                  style: TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+  @override
+  Widget build(BuildContext context) {
+    final data = doc.data() as Map<String, dynamic>;
+    final status = (data['status'] ?? '').toString();
+    final paymentStatus = (data['paymentStatus'] ?? '').toString();
+    final paymentMethod = (data['paymentMethod'] ?? '').toString();
+    final total = data['totalPayable'] ?? data['itemTotal'] ?? 0;
+    final cart = (data['cartItems'] as List?) ?? const [];
+    final sellerId = (data['sellerId'] ?? '').toString();
+    final buyerHandover = data['buyerHandoverConfirmed'] == true;
+    final sellerHandover = data['sellerHandoverConfirmed'] == true;
+
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('farms')
+          .where('sellerId', isEqualTo: sellerId)
+          .limit(1)
+          .get(),
+      builder: (context, farmSnap) {
+        final farmName = farmSnap.hasData && farmSnap.data!.docs.isNotEmpty
+            ? (farmSnap.data!.docs.first.data()
+                    as Map<String, dynamic>)['farmName']
+                    ?.toString() ??
+                'Farm'
+            : 'Farm';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-        ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(farmName,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w700)),
+                        Text('Order #${doc.id.substring(0, 8)}…',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600)),
+                      ],
+                    ),
+                  ),
+                  _chip(OrderService.statusLabel(status)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('₹$total · Pickup',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: TeraFarmColors.farmerGreenDark)),
+              Text(
+                paymentMethod == PaymentMethods.cod
+                    ? (paymentStatus == PaymentStatuses.paid
+                        ? 'COD paid at pickup'
+                        : 'Cash on Pickup')
+                    : (paymentStatus == PaymentStatuses.paid
+                        ? 'UPI paid'
+                        : 'UPI awaiting farmer confirm'),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 8),
+              ...cart.take(3).map((item) {
+                if (item is! Map) return const SizedBox.shrink();
+                return Text(
+                  '• ${item['name'] ?? ''} × ${item['quantity'] ?? 1}',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                );
+              }),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => showOrderChatSheet(
+                      context,
+                      orderId: doc.id,
+                      title: 'Chat · $farmName',
+                    ),
+                    icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                    label: const Text('Message'),
+                  ),
+                  if (status == OrderStatuses.awaitingPayment ||
+                      (paymentMethod == PaymentMethods.upi &&
+                          paymentStatus == PaymentStatuses.awaitingPayment))
+                    FilledButton.icon(
+                      onPressed: () => _payAgain(context, data),
+                      icon: const Icon(Icons.currency_rupee, size: 18),
+                      label: const Text('Pay UPI'),
+                      style: FilledButton.styleFrom(
+                          backgroundColor: TeraFarmColors.primary),
+                    ),
+                  if (status == OrderStatuses.readyForPickup)
+                    FilledButton(
+                      onPressed: buyerHandover
+                          ? null
+                          : () async {
+                              try {
+                                await OrderService.instance.confirmHandover(
+                                  orderId: doc.id,
+                                  asBuyer: true,
+                                );
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('$e')),
+                                  );
+                                }
+                              }
+                            },
+                      style: FilledButton.styleFrom(
+                          backgroundColor: TeraFarmColors.farmerGreen),
+                      child: Text(buyerHandover
+                          ? (sellerHandover
+                              ? 'Completed'
+                              : 'Waiting for farmer')
+                          : 'Confirm I received produce'),
+                    ),
+                  if (status == OrderStatuses.readyForPickup ||
+                      status == OrderStatuses.accepted)
+                    TextButton.icon(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text('Pickup code'),
+                            content: SizedBox(
+                              width: 200,
+                              height: 220,
+                              child: QrImageView(
+                                data: doc.id,
+                                size: 180,
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Close'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.qr_code, size: 18),
+                      label: const Text('Show QR'),
+                    ),
+                  if (status == OrderStatuses.awaitingPayment ||
+                      status == OrderStatuses.pending)
+                    TextButton(
+                      onPressed: () async {
+                        try {
+                          await OrderService.instance
+                              .cancel(doc.id, asSeller: false);
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('$e')),
+                            );
+                          }
+                        }
+                      },
+                      child: Text('Cancel',
+                          style: TextStyle(color: Colors.red.shade700)),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _chip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: TeraFarmColors.sage,
+        borderRadius: BorderRadius.circular(12),
       ),
+      child: Text(label,
+          style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: TeraFarmColors.primaryDark)),
     );
   }
 }

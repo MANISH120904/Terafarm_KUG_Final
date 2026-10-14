@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'services/order_service.dart';
 import 'theme/tera_farm_theme.dart';
+import 'widgets/order_chat_sheet.dart';
 import 'widgets/tera_farm_scaffold.dart';
 
 class OrderListPage extends StatefulWidget {
@@ -12,26 +14,23 @@ class OrderListPage extends StatefulWidget {
 }
 
 class _OrderListPageState extends State<OrderListPage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
 
-  Future<void> _updateOrderStatus(String orderId, String newStatus) async {
-    await _firestore.collection('orders').doc(orderId).update({
-      'status': newStatus,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> _markPaymentReceived(String orderId) async {
-    await _firestore.collection('orders').doc(orderId).update({
-      'paymentStatus': 'paid',
-      'paidAt': FieldValue.serverTimestamp(),
-    });
+  Future<void> _run(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final String sellerId = _auth.currentUser!.uid;
+    final sellerId = _auth.currentUser!.uid;
 
     return TeraFarmScaffold(
       mode: TeraFarmScaffoldMode.inner,
@@ -57,15 +56,37 @@ class _OrderListPageState extends State<OrderListPage> {
               return bDate.compareTo(aDate);
             });
 
-          final pendingOrders = allOrders
-              .where((doc) => (doc['status'] ?? 'pending') == 'pending')
-              .toList();
-          final acceptedOrders = allOrders
-              .where((doc) => (doc['status'] ?? '') == 'accepted')
-              .toList();
-          final completedOrders = allOrders.where((doc) {
-            final s = (doc['status'] ?? '').toString().toLowerCase();
-            return s == 'rejected' || s == 'delivered' || s == 'cancelled';
+          // Expire unpaid UPI in the background.
+          for (final doc in allOrders) {
+            final data = doc.data() as Map<String, dynamic>;
+            if (data['status'] == OrderStatuses.awaitingPayment) {
+              OrderService.instance.cancelIfUpiExpired(doc.id);
+            }
+          }
+
+          final awaitingUpi = allOrders.where((d) {
+            final data = d.data() as Map<String, dynamic>;
+            return data['status'] == OrderStatuses.awaitingPayment ||
+                (data['paymentMethod'] == PaymentMethods.upi &&
+                    data['paymentStatus'] == PaymentStatuses.awaitingPayment &&
+                    data['status'] != OrderStatuses.cancelled);
+          }).toList();
+
+          final pending = allOrders.where((d) {
+            final data = d.data() as Map<String, dynamic>;
+            return data['status'] == OrderStatuses.pending;
+          }).toList();
+
+          final inProgress = allOrders.where((d) {
+            final s = (d.data() as Map<String, dynamic>)['status'];
+            return s == OrderStatuses.accepted ||
+                s == OrderStatuses.readyForPickup;
+          }).toList();
+
+          final history = allOrders.where((d) {
+            final s = ((d.data() as Map<String, dynamic>)['status'] ?? '')
+                .toString();
+            return OrderStatuses.history.contains(s);
           }).toList();
 
           if (allOrders.isEmpty) {
@@ -76,14 +97,9 @@ class _OrderListPageState extends State<OrderListPage> {
                   Icon(Icons.receipt_long_outlined,
                       size: 64, color: Colors.grey.shade400),
                   const SizedBox(height: 12),
-                  Text(
-                    'No orders yet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text('No orders yet',
+                      style: TextStyle(
+                          fontSize: 16, color: Colors.grey.shade600)),
                 ],
               ),
             );
@@ -92,24 +108,33 @@ class _OrderListPageState extends State<OrderListPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
-              _sectionHeader('Active', pendingOrders.length + acceptedOrders.length),
-              const SizedBox(height: 10),
-              if (pendingOrders.isEmpty && acceptedOrders.isEmpty)
-                _emptyHint('No active orders')
-              else ...[
-                for (final doc in pendingOrders)
-                  _buildOrderCard(doc, status: 'pending'),
-                for (final doc in acceptedOrders)
-                  _buildOrderCard(doc, status: 'accepted'),
-              ],
-              const SizedBox(height: 22),
-              _sectionHeader('History', completedOrders.length),
-              const SizedBox(height: 10),
-              if (completedOrders.isEmpty)
-                _emptyHint('No completed orders')
+              _sectionHeader('Awaiting UPI confirm', awaitingUpi.length),
+              const SizedBox(height: 8),
+              if (awaitingUpi.isEmpty)
+                _emptyHint('No unpaid UPI orders')
               else
-                for (final doc in completedOrders)
-                  _buildOrderCard(doc, status: (doc['status'] ?? '').toString()),
+                for (final doc in awaitingUpi) _buildOrderCard(doc),
+              const SizedBox(height: 18),
+              _sectionHeader('New / pending', pending.length),
+              const SizedBox(height: 8),
+              if (pending.isEmpty)
+                _emptyHint('No pending orders')
+              else
+                for (final doc in pending) _buildOrderCard(doc),
+              const SizedBox(height: 18),
+              _sectionHeader('In progress', inProgress.length),
+              const SizedBox(height: 8),
+              if (inProgress.isEmpty)
+                _emptyHint('Nothing in progress')
+              else
+                for (final doc in inProgress) _buildOrderCard(doc),
+              const SizedBox(height: 18),
+              _sectionHeader('History', history.length),
+              const SizedBox(height: 8),
+              if (history.isEmpty)
+                _emptyHint('No history yet')
+              else
+                for (final doc in history) _buildOrderCard(doc),
             ],
           );
         },
@@ -129,14 +154,12 @@ class _OrderListPageState extends State<OrderListPage> {
   Widget _sectionHeader(String title, int count) {
     return Row(
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: TeraFarmColors.primaryDark,
-          ),
-        ),
+        Text(title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: TeraFarmColors.primaryDark,
+            )),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -144,42 +167,35 @@ class _OrderListPageState extends State<OrderListPage> {
             color: TeraFarmColors.sage,
             borderRadius: BorderRadius.circular(999),
           ),
-          child: Text(
-            '$count',
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: TeraFarmColors.primaryDark,
-            ),
-          ),
+          child: Text('$count',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: TeraFarmColors.primaryDark)),
         ),
       ],
     );
   }
 
-  Widget _emptyHint(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(text, style: TextStyle(color: Colors.grey.shade600)),
-    );
-  }
+  Widget _emptyHint(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(text, style: TextStyle(color: Colors.grey.shade600)),
+      );
 
-  Widget _buildOrderCard(DocumentSnapshot orderDoc, {required String status}) {
+  Widget _buildOrderCard(DocumentSnapshot orderDoc) {
     final data = orderDoc.data() as Map<String, dynamic>;
     final orderId = orderDoc.id;
     final buyerId = (data['buyerId'] ?? 'unknown').toString();
-    final deliveryMethod =
-        (data['deliveryMethod'] ?? data['delivery'] ?? 'pickup').toString();
-    final address = (data['deliveryAddress'] ?? data['location'] ?? '—').toString();
+    final status = (data['status'] ?? '').toString();
+    final paymentStatus = (data['paymentStatus'] ?? '').toString();
+    final paymentMethod = (data['paymentMethod'] ?? '').toString();
     final total = data['totalPayable'] ?? data['itemTotal'] ?? 0;
-    final paymentStatus =
-        (data['paymentStatus'] ?? 'awaiting_payment').toString().toLowerCase();
     final sellerUpi = (data['sellerUpiId'] ?? '').toString();
+    final buyerClaimed = data['buyerPaidClaimedAt'] != null;
     final items = (data['cartItems'] as List?) ?? const [];
     final firstItem = items.isNotEmpty && items.first is Map
         ? Map<String, dynamic>.from(items.first as Map)
         : <String, dynamic>{};
     final productImage = (firstItem['image'] ?? '').toString();
-    final itemCount = items.length;
 
     return FutureBuilder<DocumentSnapshot>(
       future: _firestore.collection('users').doc(buyerId).get(),
@@ -223,68 +239,68 @@ class _OrderListPageState extends State<OrderListPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          buyerName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: TeraFarmColors.primaryDark,
-                          ),
-                        ),
+                        Text(buyerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: TeraFarmColors.primaryDark,
+                            )),
                         const SizedBox(height: 4),
                         Text(
-                          '$itemCount item${itemCount == 1 ? '' : 's'} · ₹$total',
+                          '${items.length} item(s) · ₹$total · Pickup',
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             color: TeraFarmColors.farmerGreenDark,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          deliveryMethod == 'delivery'
-                              ? 'Delivery · $address'
-                              : 'Pickup',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
+                        if (paymentMethod == PaymentMethods.upi &&
+                            sellerUpi.isNotEmpty)
+                          Text('UPI: $sellerUpi',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey.shade700)),
+                        if (buyerClaimed &&
+                            paymentStatus == PaymentStatuses.awaitingPayment)
+                          Text('Buyer claimed payment — verify in UPI app',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade800,
+                                  fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  _chip(OrderService.statusLabel(status),
+                      _statusColor(status)),
                   _chip(
-                    label: _statusLabel(status),
-                    color: _statusColor(status),
-                  ),
-                  _chip(
-                    label: paymentStatus == 'paid' ? 'Paid' : 'UPI pending',
-                    color: paymentStatus == 'paid'
+                    paymentMethod == PaymentMethods.cod
+                        ? (paymentStatus == PaymentStatuses.paid
+                            ? 'COD paid'
+                            : 'COD')
+                        : (paymentStatus == PaymentStatuses.paid
+                            ? 'UPI paid'
+                            : 'UPI unpaid'),
+                    paymentStatus == PaymentStatuses.paid
                         ? TeraFarmColors.farmerGreen
                         : Colors.orange.shade700,
                   ),
-                  if (sellerUpi.isNotEmpty)
-                    _chip(
-                      label: sellerUpi,
-                      color: TeraFarmColors.primary,
-                    ),
                 ],
               ),
               const SizedBox(height: 12),
-              _buildActionButtons(
-                status: status,
+              _actions(
                 orderId: orderId,
+                status: status,
                 paymentStatus: paymentStatus,
+                paymentMethod: paymentMethod,
+                buyerHandover: data['buyerHandoverConfirmed'] == true,
+                sellerHandover: data['sellerHandoverConfirmed'] == true,
               ),
             ],
           ),
@@ -293,38 +309,184 @@ class _OrderListPageState extends State<OrderListPage> {
     );
   }
 
-  Widget _productImage(String src) {
-    if (src.startsWith('http')) {
-      return Image.network(
-        src,
-        width: 64,
-        height: 64,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _imageFallback(),
-      );
-    }
-    if (src.isNotEmpty) {
-      return Image.asset(
-        src,
-        width: 64,
-        height: 64,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _imageFallback(),
-      );
-    }
-    return _imageFallback();
-  }
+  Widget _actions({
+    required String orderId,
+    required String status,
+    required String paymentStatus,
+    required String paymentMethod,
+    required bool buyerHandover,
+    required bool sellerHandover,
+  }) {
+    final messageBtn = OutlinedButton.icon(
+      onPressed: () => showOrderChatSheet(context, orderId: orderId),
+      icon: const Icon(Icons.chat_bubble_outline, size: 18),
+      label: const Text('Message'),
+    );
 
-  Widget _imageFallback() {
-    return Container(
-      width: 64,
-      height: 64,
-      color: TeraFarmColors.sage,
-      child: const Icon(Icons.eco, color: TeraFarmColors.primary),
+    if (status == OrderStatuses.awaitingPayment ||
+        (paymentMethod == PaymentMethods.upi &&
+            paymentStatus == PaymentStatuses.awaitingPayment &&
+            status != OrderStatuses.cancelled &&
+            status != OrderStatuses.rejected)) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _run(
+                      () => OrderService.instance.cancel(orderId, asSeller: true)),
+                  style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade700),
+                  child: const Text('Cancel unpaid'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => _run(() =>
+                      OrderService.instance.sellerConfirmUpiReceived(orderId)),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: TeraFarmColors.primary),
+                  child: const Text('Confirm UPI'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(width: double.infinity, child: messageBtn),
+        ],
+      );
+    }
+
+    if (status == OrderStatuses.pending) {
+      final canAccept = paymentMethod != PaymentMethods.upi ||
+          paymentStatus == PaymentStatuses.paid;
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () =>
+                      _run(() => OrderService.instance.reject(orderId)),
+                  style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade700),
+                  child: const Text('Reject'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: canAccept
+                      ? () =>
+                          _run(() => OrderService.instance.accept(orderId))
+                      : null,
+                  style: FilledButton.styleFrom(
+                      backgroundColor: TeraFarmColors.primary),
+                  child: const Text('Accept'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(width: double.infinity, child: messageBtn),
+        ],
+      );
+    }
+
+    if (status == OrderStatuses.accepted) {
+      return Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => _run(
+                  () => OrderService.instance.markReadyForPickup(orderId)),
+              style: FilledButton.styleFrom(
+                  backgroundColor: TeraFarmColors.farmerGreen),
+              child: const Text('Mark ready for pickup'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _run(() =>
+                      OrderService.instance.cancel(orderId, asSeller: true)),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: messageBtn),
+            ],
+          ),
+        ],
+      );
+    }
+
+    if (status == OrderStatuses.readyForPickup) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (buyerHandover)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text('Buyer confirmed receipt',
+                  style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w600)),
+            ),
+          FilledButton(
+            onPressed: sellerHandover
+                ? null
+                : () => _run(() => OrderService.instance
+                    .confirmHandover(orderId: orderId, asBuyer: false)),
+            style: FilledButton.styleFrom(
+                backgroundColor: TeraFarmColors.primary),
+            child: Text(sellerHandover
+                ? 'Waiting for buyer confirm'
+                : 'Confirm handover done'),
+          ),
+          const SizedBox(height: 8),
+          messageBtn,
+        ],
+      );
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: messageBtn,
     );
   }
 
-  Widget _chip({required String label, required Color color}) {
+  Widget _productImage(String src) {
+    if (src.startsWith('http')) {
+      return Image.network(src,
+          width: 64,
+          height: 64,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _fallback());
+    }
+    if (src.isNotEmpty) {
+      return Image.asset(src,
+          width: 64,
+          height: 64,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _fallback());
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() => Container(
+        width: 64,
+        height: 64,
+        color: TeraFarmColors.sage,
+        child: const Icon(Icons.eco, color: TeraFarmColors.primary),
+      );
+
+  Widget _chip(String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -332,144 +494,26 @@ class _OrderListPageState extends State<OrderListPage> {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withOpacity(0.25)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-        ),
-      ),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.w700, fontSize: 12)),
     );
   }
 
-  String _statusLabel(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'Pending';
-      case 'accepted':
-        return 'Accepted';
-      case 'delivered':
-        return 'Delivered';
-      case 'rejected':
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return status;
-    }
-  }
-
   Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
+    switch (status) {
+      case OrderStatuses.awaitingPayment:
+        return Colors.orange.shade800;
+      case OrderStatuses.pending:
         return Colors.blueGrey;
-      case 'accepted':
+      case OrderStatuses.accepted:
         return Colors.blue.shade700;
-      case 'delivered':
+      case OrderStatuses.readyForPickup:
         return TeraFarmColors.farmerGreen;
-      case 'rejected':
-      case 'cancelled':
+      case OrderStatuses.completed:
+        return TeraFarmColors.primary;
+      default:
         return Colors.red.shade700;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Widget _buildActionButtons({
-    required String status,
-    required String orderId,
-    required String paymentStatus,
-  }) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _updateOrderStatus(orderId, 'rejected'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red.shade700,
-                      side: BorderSide(color: Colors.red.shade200),
-                    ),
-                    child: const Text('Reject'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => _updateOrderStatus(orderId, 'accepted'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: TeraFarmColors.primary,
-                    ),
-                    child: const Text('Accept'),
-                  ),
-                ),
-              ],
-            ),
-            if (paymentStatus != 'paid') ...[
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton.icon(
-                  onPressed: () => _markPaymentReceived(orderId),
-                  icon: const Icon(Icons.verified_outlined, size: 18),
-                  label: const Text('Mark UPI payment received'),
-                ),
-              ),
-            ],
-          ],
-        );
-
-      case 'accepted':
-        return Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _updateOrderStatus(orderId, 'cancelled'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red.shade700,
-                    ),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => _updateOrderStatus(orderId, 'delivered'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: TeraFarmColors.farmerGreen,
-                    ),
-                    child: const Text('Delivered'),
-                  ),
-                ),
-              ],
-            ),
-            if (paymentStatus != 'paid') ...[
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton.icon(
-                  onPressed: () => _markPaymentReceived(orderId),
-                  icon: const Icon(Icons.verified_outlined, size: 18),
-                  label: const Text('Mark UPI payment received'),
-                ),
-              ),
-            ],
-          ],
-        );
-
-      default:
-        return Align(
-          alignment: Alignment.centerLeft,
-          child: _chip(
-            label: _statusLabel(status),
-            color: _statusColor(status),
-          ),
-        );
     }
   }
 }

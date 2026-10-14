@@ -1581,3 +1581,50 @@ exports.addTestFCMTokens = functions
       res.status(500).json({ error: error.message });
     }
   });
+
+/**
+ * Callable: push an order/payment notification to a user via FCM.
+ * Client: FirebaseFunctions.instanceFor(region: asia-south1).httpsCallable(sendOrderPush)
+ */
+exports.sendOrderPush = functions
+  .region('asia-south1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+    }
+    const targetUid = data.targetUid;
+    const title = data.title || 'TeraFarm';
+    const body = data.body || '';
+    const orderId = data.orderId || '';
+    const type = data.type || 'order';
+    if (!targetUid || typeof targetUid !== 'string') {
+      throw new functions.https.HttpsError('invalid-argument', 'targetUid required');
+    }
+    const userDoc = await admin.firestore().collection('users').doc(targetUid).get();
+    if (!userDoc.exists) {
+      return { success: false, reason: 'user_not_found' };
+    }
+    const token = userDoc.data().fcmToken;
+    if (!token || typeof token !== 'string' || token.startsWith('cTEST_')) {
+      return { success: false, reason: 'no_fcm_token' };
+    }
+    try {
+      const messageId = await admin.messaging().send({
+        token,
+        notification: { title, body },
+        data: {
+          type: String(type),
+          orderId: String(orderId),
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        },
+        android: {
+          priority: 'high',
+          notification: { channelId: 'order_updates' },
+        },
+      });
+      return { success: true, messageId };
+    } catch (err) {
+      console.error('sendOrderPush FCM error', err);
+      return { success: false, reason: err.message || 'send_failed' };
+    }
+  });

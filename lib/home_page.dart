@@ -8,6 +8,7 @@ import 'Product_page.dart';
 import 'menu_page.dart';
 import 'address_map_picker.dart';
 import 'l10n/app_localizations.dart';
+import 'utils/farm_distance.dart';
 import 'widgets/mode_language_bar.dart';
 import 'widgets/tera_farm_hub_app_bar.dart';
 class HomePage extends StatefulWidget {
@@ -19,6 +20,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _userAddress = '';
+  double _radiusKm = 5;
 
   // Default India (Chennai) — never SF.
   static const _fallback = latLong.LatLng(13.0827, 80.2707);
@@ -249,6 +251,8 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      _buildRadiusFilter(),
+                      const SizedBox(height: 8),
 
                       StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
@@ -269,11 +273,37 @@ class _HomePageState extends State<HomePage> {
                               child: Text(loc.noFarms),
                             );
                           }
+                          final nearby = farmsWithinRadius(
+                            docs: docs,
+                            radiusKm: _radiusKm,
+                          );
+                          if (LocationService().currentPosition == null) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 20),
+                              child: Text(
+                                'Set your location above to see nearby farms.',
+                                style: TextStyle(color: Colors.grey.shade700),
+                              ),
+                            );
+                          }
+                          if (nearby.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 20),
+                              child: Text(
+                                'No farms within ${_radiusKm.round()} km. Increase the radius to search farther.',
+                                style: TextStyle(color: Colors.grey.shade700),
+                              ),
+                            );
+                          }
                           return ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            itemCount: docs.length,
-                            itemBuilder: (ctx, i) => _buildFarmCard(docs[i], loc),
+                            itemCount: nearby.length,
+                            itemBuilder: (ctx, i) => _buildFarmCard(
+                              nearby[i].doc,
+                              loc,
+                              distanceKm: nearby[i].distanceKm,
+                            ),
                           );
                         },
                       ),
@@ -290,7 +320,52 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildFarmCard(DocumentSnapshot doc, AppLocalizations loc) {
+  Widget _buildRadiusFilter() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.radar, size: 18, color: Color(0xFF22C55E)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Farms within ${_radiusKm.round()} km',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text(
+                '5–100 km',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          Slider(
+            value: _radiusKm,
+            min: 5,
+            max: 100,
+            divisions: 19,
+            label: '${_radiusKm.round()} km',
+            activeColor: const Color(0xFF22C55E),
+            onChanged: (v) => setState(() => _radiusKm = v),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFarmCard(
+    DocumentSnapshot doc,
+    AppLocalizations loc, {
+    double? distanceKm,
+  }) {
     final farm = doc.data()! as Map<String, dynamic>;
     final name    = farm['farmName']        ?? loc.unnamedFarm;
     final desc    = farm['farmDescription'] ?? loc.noDescription;
@@ -413,6 +488,23 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
+                        if (distanceKm != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22C55E).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              formatDistanceKm(distanceKm),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF15803D),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 12),

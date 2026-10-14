@@ -13,6 +13,8 @@ import 'l10n/app_localizations.dart';
 import 'l10n/app_locales.dart';
 import 'package:TeraFarm/providers/weather_provider.dart';
 import 'package:TeraFarm/Cloud Notification/notification_manager.dart';
+import 'services/notification_service.dart';
+import 'services/order_notification_service.dart';
 import 'theme/tera_farm_theme.dart';
 
 /// Completes when Firebase (and light prefs) are ready for UI that needs them.
@@ -80,6 +82,11 @@ Future<void> _initBackgroundServices() async {
         .initialize()
         .timeout(const Duration(seconds: 20));
     debugPrint('✅ Weather notification system initialized');
+    try {
+      await NotificationService().initialize();
+    } catch (_) {}
+    OrderNotificationService.instance.start();
+    debugPrint('✅ Order notification inbox listener started');
   } catch (e) {
     debugPrint('❌ Background services init skipped: $e');
   }
