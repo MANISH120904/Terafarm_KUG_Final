@@ -321,7 +321,7 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildFeatureCard(String title, IconData icon, List<Color> colors) {
+  Widget _buildFeatureCard(String title, IconData icon, List<Color> colors, [VoidCallback? onTap]) {
     // Check if this is the "My Farm" card and we have a profile image
     bool isMyFarm = title == 'My Farm' || title == 'मेरी फ़सल' || title == 'என் பண்ணை' || title == 'నా రైతుపంట';
     bool hasProfileImage = isMyFarm && _userProfileImage != null && _userProfileImage!.isNotEmpty;
@@ -330,13 +330,13 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
       animation: _shimmerAnimation,
       builder: (context, child) {
         return Container(
-          height: 115, // Increased height specifically for Tamil text
+          height: 120,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
                 colors[0],
                 colors[1],
-                colors[0].withOpacity(0.9),
+                colors[0].withOpacity(0.88),
                 Colors.white.withOpacity(0.95),
                 Colors.white.withOpacity(0.3),
                 colors[1].withOpacity(0.9),
@@ -354,23 +354,29 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               transform: GradientRotation(
-                (_shimmerAnimation.value * 0.1) - 0.05, // Subtle rotation for realism
+                (_shimmerAnimation.value * 0.1) - 0.05,
               ),
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: colors[0].withOpacity(0.4),
-                blurRadius: 8,
+                color: colors[1].withOpacity(0.35),
+                blurRadius: 12,
                 spreadRadius: 1,
-                offset: const Offset(0, 3),
+                offset: const Offset(0, 5),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 6,
+                spreadRadius: 0,
+                offset: const Offset(0, 2),
               ),
               if (_shimmerAnimation.value > 0.05 && _shimmerAnimation.value < 0.95)
                 BoxShadow(
                   color: Colors.white.withOpacity(
                     0.6 * 
                     (1 - ((_shimmerAnimation.value - 0.5).abs() * 2)) *
-                    (sin(_shimmerAnimation.value * 3.14159) * 0.5 + 0.5) // Sine wave for smooth intensity
+                    (sin(_shimmerAnimation.value * 3.14159) * 0.5 + 0.5)
                   ),
                   blurRadius: 12 + (_shimmerAnimation.value * 6),
                   spreadRadius: 2,
@@ -379,7 +385,6 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                     -12 + (_shimmerAnimation.value * 24)
                   ),
                 ),
-              // Additional subtle inner glow
               if (_shimmerAnimation.value > 0.1 && _shimmerAnimation.value < 0.9)
                 BoxShadow(
                   color: Colors.white.withOpacity(
@@ -394,8 +399,8 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () async {
+              borderRadius: BorderRadius.circular(20),
+              onTap: onTap ?? () async {
             switch (title) {
               case 'My Farm':
               case 'मेरी फ़सल':
@@ -431,34 +436,37 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
             }
           },
           child: Padding(
-            padding: const EdgeInsets.all(18), // Increased padding
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center, // Changed to center
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Icon container
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(
-                      0.2 + (_shimmerAnimation.value > 0.15 && _shimmerAnimation.value < 0.85 
-                        ? 0.2 * (1 - ((_shimmerAnimation.value - 0.5).abs() * 2)) 
+                      0.22 + (_shimmerAnimation.value > 0.15 && _shimmerAnimation.value < 0.85 
+                        ? 0.18 * (1 - ((_shimmerAnimation.value - 0.5).abs() * 2)) 
                         : 0.0)
                     ),
-                    borderRadius: BorderRadius.circular(12), // Increased border radius
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1,
+                    ),
                     boxShadow: [
                       if (_shimmerAnimation.value > 0.15 && _shimmerAnimation.value < 0.85)
                         BoxShadow(
                           color: Colors.white.withOpacity(
                             0.8 * 
                             (1 - ((_shimmerAnimation.value - 0.5).abs() * 2)) *
-                            (sin(_shimmerAnimation.value * pi * 2) * 0.3 + 0.7) // Smooth pulsing
+                            (sin(_shimmerAnimation.value * pi * 2) * 0.3 + 0.7)
                           ),
                           blurRadius: 8 + (_shimmerAnimation.value * 4),
                           spreadRadius: 1,
                           offset: const Offset(0, 0),
                         ),
-                      // Subtle colored glow from main card color
                       if (_shimmerAnimation.value > 0.2 && _shimmerAnimation.value < 0.8)
                         BoxShadow(
                           color: colors[0].withOpacity(
@@ -472,17 +480,17 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                   ),
                   child: hasProfileImage 
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                         child: Image.network(
                           _userProfileImage!,
-                          width: 22, // Slightly larger
-                          height: 22,
+                          width: 26,
+                          height: 26,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return Icon(
                               icon,
                               color: Colors.white,
-                              size: 22,
+                              size: 26,
                             );
                           },
                         ),
@@ -490,24 +498,22 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                     : Icon(
                         icon,
                         color: Colors.white,
-                        size: 22, // Slightly larger
+                        size: 26,
                       ),
                 ),
-                const SizedBox(height: 8), // Reduced spacing for more text room
+                const SizedBox(height: 10),
                 // Text with proper container and dynamic sizing
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 1), // Reduced horizontal padding
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      // Calculate dynamic font size based on text length and available space
-                      double baseFontSize = 12;
+                      double baseFontSize = 13.5;
                       double dynamicFontSize = baseFontSize;
                       
-                      // Adjust font size based on text length for different languages
                       if (title.length > 15) {
-                        dynamicFontSize = 10; // Smaller for very long text
+                        dynamicFontSize = 12;
                       } else if (title.length > 12) {
-                        dynamicFontSize = 11; // Medium size for moderately long text
+                        dynamicFontSize = 12.8;
                       }
                       
                       // Special handling for Tamil text which tends to be longer
@@ -698,8 +704,8 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              const Color(0xFF8B5CF6),
-                              const Color(0xFF7C3AED),
+                              const Color(0xFF236E39),
+                              const Color(0xFF174B26),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(10),
@@ -724,24 +730,56 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                   const SizedBox(height: 20),
                   
                   // Feature cards grid
-                  Column(
-                    children: [
-                      Row(
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final cardWidth = (constraints.maxWidth - 16) / 2;
+                      return Column(
                         children: [
-                          Expanded(child: _buildFeatureCard(loc.myFarm, Icons.agriculture, [const Color(0xFF4F7942), const Color(0xFF3D5E33)])),
-                          const SizedBox(width: 16), // Increased spacing
-                          Expanded(child: _buildFeatureCard(loc.dailyTasks, Icons.task_alt, [const Color(0xFF4F7942), const Color(0xFF3D5E33)])),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildFeatureCard(
+                                  loc.myFarm,
+                                  Icons.agriculture,
+                                  const [Color(0xFF26733E), Color(0xFF164D28)],
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const DashboardPage()),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildFeatureCard(
+                                  loc.dailyTasks,
+                                  Icons.task_alt,
+                                  const [Color(0xFF1E7A5A), Color(0xFF12523B)],
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const PlantGrowthAnalysisPage()),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: SizedBox(
+                              width: cardWidth,
+                              child: _buildFeatureCard(
+                                loc.cropSuggestion,
+                                Icons.lightbulb_outline,
+                                const [Color(0xFF2C743F), Color(0xFF1A4F27)],
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => CropSuggestionPage()),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
-                      ),
-                      const SizedBox(height: 16), // Increased spacing
-                      Row(
-                        children: [
-                          Expanded(child: _buildFeatureCard(loc.cropSuggestion, Icons.lightbulb_outline, [const Color(0xFF4F7942), const Color(0xFF3D5E33)])),
-                          const SizedBox(width: 16), // Increased spacing
-                          Expanded(child: _buildFeatureCard(loc.plantAR, Icons.view_in_ar, [const Color(0xFF4F7942), const Color(0xFF3D5E33)])),
-                        ],
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),

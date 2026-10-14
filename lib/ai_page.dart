@@ -1,5 +1,5 @@
-﻿import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart' as latLong;
+import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart' as lat_long;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
@@ -15,8 +15,6 @@ import 'sustainable.dart';
 import 'l10n/app_localizations.dart';
 import 'widgets/mode_language_bar.dart';
 import 'widgets/tera_farm_hub_app_bar.dart';
-import 'terra_earth_intelligence_page.dart';
-import 'offline_toolkit_page.dart';
 
 class AIPage extends StatefulWidget {
   const AIPage({Key? key}) : super(key: key);
@@ -126,8 +124,8 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
   Future<void> _chooseMapLocation() async {
     final pos = LocationService().currentPosition;
     final initial = pos != null
-        ? latLong.LatLng(pos.latitude, pos.longitude)
-        : const latLong.LatLng(13.0827, 80.2707);
+        ? lat_long.LatLng(pos.latitude, pos.longitude)
+        : const lat_long.LatLng(13.0827, 80.2707);
 
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
@@ -249,12 +247,7 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(20),
           child: Container(
             width: double.infinity,
-            constraints: BoxConstraints(
-              minHeight: buttonDescription != null ? 120 : 100,
-              maxHeight: buttonDescription != null ? 140 : 120,
-            ),
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
             decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -281,7 +274,7 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
                 (_shimmerAnimation.value * 0.1) - 0.05,
               ),
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: buttonColors[0].withOpacity(0.25),
@@ -326,14 +319,14 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
             children: [
               // Icon container
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(
-                    0.2 + (_shimmerAnimation.value > 0.15 && _shimmerAnimation.value < 0.85 
-                      ? 0.2 * (1 - ((_shimmerAnimation.value - 0.5).abs() * 2)) 
+                    0.22 + (_shimmerAnimation.value > 0.15 && _shimmerAnimation.value < 0.85 
+                      ? 0.18 * (1 - ((_shimmerAnimation.value - 0.5).abs() * 2)) 
                       : 0.0)
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     if (_shimmerAnimation.value > 0.15 && _shimmerAnimation.value < 0.85)
                       BoxShadow(
@@ -360,7 +353,7 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
                 ),
                 child: Icon(
                   _getToolIcon(label),
-                  size: 26,
+                  size: 28,
                   color: Colors.white,
                 ),
               ),
@@ -369,13 +362,12 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
               Flexible(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    // Dynamic font size based on available space
-                    double fontSize = 12;
-                    if (label.length > 12) {
-                      fontSize = 11;
+                    double fontSize = 13;
+                    if (label.length > 14) {
+                      fontSize = 12;
                     }
-                    if (label.length > 16) {
-                      fontSize = 10;
+                    if (label.length > 20) {
+                      fontSize = 11;
                     }
                     
                     return Container(
@@ -398,17 +390,17 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
               ),
               // Description text
               if (buttonDescription != null) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Flexible(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Text(
                       buttonDescription,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.85),
-                        fontSize: 9,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w500,
-                        height: 1.1,
+                        height: 1.15,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
@@ -558,14 +550,14 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
                         ),
                         const SizedBox(height: 20),
                     
-                        // Tool buttons grid
+                        // Tool buttons grid (2x2 layout for 4 tools)
                         GridView.count(
                           crossAxisCount: 2,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 20,
-                          crossAxisSpacing: 20,
-                          childAspectRatio: 0.9, // Adjusted for better proportions
+                          mainAxisSpacing: 18,
+                          crossAxisSpacing: 18,
+                          childAspectRatio: 0.95,
                           children: [
                             _buildToolButton(loc.plantDoctor, _getToolDescription(loc.plantDoctor, loc), () {
                               Navigator.push(
@@ -591,29 +583,7 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
                                   MaterialPageRoute(
                                       builder: (_) => const SustainablePage()));
                             }, buttonDescription: loc.sustainableFarmingPractices),
-                            _buildToolButton('Terra Earth Intelligence', loc.aiPoweredFarmingAssistant, () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const TerraEarthIntelligencePage()));
-                            }, buttonDescription: 'Terra Earth Intelligence'),
-                            _buildToolButton('Offline AI Toolkit', loc.aiPoweredFarmingAssistant, () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const OfflineToolkitPage()));
-                            }, buttonDescription: loc.aiPoweredFarmingAssistant),
                           ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          width: double.infinity,
-                          child: _buildToolButton(loc.rover, _getToolDescription(loc.rover, loc), () {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const CarControlPage()));
-                          }, buttonDescription: loc.controlSmartRovers),
                         ),
                       ],
                     ),
@@ -630,18 +600,3 @@ class _AIPageState extends State<AIPage> with TickerProviderStateMixin {
   }
 }
 
-class CarControlPage extends StatelessWidget {
-  const CarControlPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.rover),
-      ),
-      body: Center(
-        child: Text('Car Control Page'),
-      ),
-    );
-  }
-}

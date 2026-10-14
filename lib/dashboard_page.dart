@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -409,7 +409,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "â‚¹${earnings.toStringAsFixed(2)}",
+                        "\u20B9${earnings.toStringAsFixed(2)}",
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -997,7 +997,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       DataCell(Text((idx++).toString())),
                       DataCell(Text(p['cropName'] ?? '')),
                       DataCell(Text("${p['stock in kgs'] ?? ''} Kg")),
-                      DataCell(Text("â‚¹${p['pricePerKg'] ?? ''}")),
+                      DataCell(Text("\u20B9${p['pricePerKg'] ?? ''}")),
                     ]));
                   }
                 }
