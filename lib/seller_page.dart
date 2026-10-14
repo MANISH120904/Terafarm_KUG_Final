@@ -12,7 +12,6 @@ import 'menu_page.dart';
 import 'l10n/app_localizations.dart';
 import 'dashboard_page.dart';
 import 'plant_growth_analysis_page.dart';
-import 'crop_suggestion_page.dart';
 import 'list_farm_page.dart';
 import 'grow_plant_page.dart';
 import 'widgets/weather_widget.dart';
@@ -414,12 +413,6 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
               case 'దైనందిన పనులు':
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const PlantGrowthAnalysisPage()));
                 break;
-              case 'Crop Suggestion':
-              case 'फसल सुझाव':
-              case 'பயிர் ஆலோசனை':
-              case 'పంట సూచన':
-                Navigator.push(context, MaterialPageRoute(builder: (_) => CropSuggestionPage()));
-                break;
               case 'Plant AR':
               case 'प्लांट एआर':
               case 'தாவரார்':
@@ -730,56 +723,34 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                   const SizedBox(height: 20),
                   
                   // Feature cards grid
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final cardWidth = (constraints.maxWidth - 16) / 2;
-                      return Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildFeatureCard(
-                                  loc.myFarm,
-                                  Icons.agriculture,
-                                  const [Color(0xFF26733E), Color(0xFF164D28)],
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const DashboardPage()),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildFeatureCard(
-                                  loc.dailyTasks,
-                                  Icons.task_alt,
-                                  const [Color(0xFF1E7A5A), Color(0xFF12523B)],
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const PlantGrowthAnalysisPage()),
-                                  ),
-                                ),
-                              ),
-                            ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFeatureCard(
+                          loc.myFarm,
+                          Icons.agriculture,
+                          const [Color(0xFF26733E), Color(0xFF164D28)],
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const DashboardPage()),
                           ),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: SizedBox(
-                              width: cardWidth,
-                              child: _buildFeatureCard(
-                                loc.cropSuggestion,
-                                Icons.lightbulb_outline,
-                                const [Color(0xFF2C743F), Color(0xFF1A4F27)],
-                                () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => CropSuggestionPage()),
-                                ),
-                              ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildFeatureCard(
+                          loc.dailyTasks,
+                          Icons.task_alt,
+                          const [Color(0xFF1E7A5A), Color(0xFF12523B)],
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PlantGrowthAnalysisPage(),
                             ),
                           ),
-                        ],
-                      );
-                    },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -845,12 +816,6 @@ class FeatureCard extends StatelessWidget {
                 case 'நாள்பட்டுப் பணிகள்':
                 case 'దైనందిన పనులు':
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const PlantGrowthAnalysisPage()));
-                  break;
-                case 'Crop Suggestion':
-                case 'फसल सुझाव':
-                case 'பயிர் ஆலோசனை':
-                case 'పంట సూచన':
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => CropSuggestionPage()));
                   break;
                 case 'Plant AR':
                 case 'प्लांट एआर':
@@ -931,11 +896,6 @@ class FeatureCard extends StatelessWidget {
       case 'நாள்பட்டுப் பணிகள்':
       case 'దైనందిన పనులు':
         return Icons.task_alt;
-      case 'Crop Suggestion':
-      case 'फसल सुझाव':
-      case 'பயிர் ஆலோசனை':
-      case 'పంట సూచన':
-        return Icons.lightbulb_outline;
       case 'Plant AR':
       case 'प्लांट एआर':
       case 'தாவரார்':

@@ -98,6 +98,217 @@ class _ForumPageState extends State<ForumPage>
   }
 }
 
+/// Shared Groups/Channels list card — avoids ListTile trailing squash for owners.
+class _TeraChatListCard extends StatelessWidget {
+  const _TeraChatListCard({
+    required this.leadingIcon,
+    required this.title,
+    required this.badgeLabel,
+    required this.isPublic,
+    required this.isMember,
+    required this.isAdmin,
+    required this.onOpen,
+    this.onJoin,
+    this.onSettings,
+    this.onDelete,
+  });
+
+  final IconData leadingIcon;
+  final String title;
+  final String badgeLabel;
+  final bool isPublic;
+  final bool isMember;
+  final bool isAdmin;
+  final VoidCallback onOpen;
+  final VoidCallback? onJoin;
+  final VoidCallback? onSettings;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF246B40),
+                      const Color(0xFF246B40).withOpacity(0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF246B40).withOpacity(0.3),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(leadingIcon, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: Color(0xFF246B40),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isPublic
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        badgeLabel,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isPublic
+                              ? Colors.green.shade700
+                              : Colors.orange.shade700,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildActions(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActions() {
+    // Owners: settings + delete only (Joined is redundant and caused congestion).
+    if (isMember && isAdmin) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _compactIconAction(
+            icon: Icons.settings,
+            color: Colors.blue,
+            bg: Colors.blue.withOpacity(0.1),
+            onPressed: onSettings,
+            tooltip: 'Manage',
+          ),
+          const SizedBox(width: 4),
+          _compactIconAction(
+            icon: Icons.delete,
+            color: Colors.red,
+            bg: Colors.red.withOpacity(0.1),
+            onPressed: onDelete,
+            tooltip: 'Delete',
+          ),
+        ],
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isMember
+              ? [Colors.grey.shade400, Colors.grey.shade500]
+              : [
+                  const Color(0xFF246B40),
+                  const Color(0xFF246B40).withOpacity(0.8),
+                ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: (isMember ? Colors.grey : const Color(0xFF246B40))
+                .withOpacity(0.3),
+            blurRadius: 6,
+            spreadRadius: 1,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: isMember ? null : onJoin,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Text(
+              isMember ? 'Joined' : 'Join',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _compactIconAction({
+    required IconData icon,
+    required Color color,
+    required Color bg,
+    required VoidCallback? onPressed,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onPressed,
+          child: SizedBox(
+            width: 36,
+            height: 36,
+            child: Icon(icon, color: color, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 ///
 /// GroupsListView: Shows public groups and any private group the user is a member of.
 /// Allows creating a new group (with public/private toggle).
@@ -180,9 +391,12 @@ class _GroupsListViewState extends State<GroupsListView> {
               final groupName = groupData['name'] ?? 'No Name';
               final bool isPublic = groupData['isPublic'] ?? true;
               final members = groupData['members'] as List<dynamic>? ?? [];
+              final admins = groupData['admins'] as List<dynamic>? ?? [];
               final currentUserId = _auth.currentUser?.uid;
               final bool isMember =
                   currentUserId != null && members.contains(currentUserId);
+              final bool isAdmin =
+                  currentUserId != null && admins.contains(currentUserId);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -211,155 +425,33 @@ class _GroupsListViewState extends State<GroupsListView> {
                     ),
                   ],
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF246B40),
-                          const Color(0xFF246B40).withOpacity(0.8),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF246B40).withOpacity(0.3),
-                          blurRadius: 6,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.group,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  title: Text(
-                    groupName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: Color(0xFF246B40),
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  subtitle: Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isPublic
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      isPublic ? 'Public Group' : 'Private Group',
-                      style: TextStyle(
-                        color: isPublic ? Colors.green.shade700 : Colors.orange.shade700,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: isMember
-                                ? [Colors.grey.shade400, Colors.grey.shade500]
-                                : [const Color(0xFF246B40), const Color(0xFF246B40).withOpacity(0.8)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (isMember ? Colors.grey : const Color(0xFF246B40)).withOpacity(0.3),
-                              blurRadius: 6,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () async {
-                              if (!isMember && currentUserId != null) {
-                                await _firestore
-                                    .collection('groups')
-                                    .doc(groupId)
-                                    .update({
-                                      'members': FieldValue.arrayUnion([
-                                        currentUserId,
-                                      ]),
-                                    });
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              child: Text(
-                                isMember ? 'Joined' : 'Join',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ),
+                child: _TeraChatListCard(
+                  leadingIcon: Icons.group,
+                  title: groupName,
+                  badgeLabel: isPublic ? 'Public Group' : 'Private Group',
+                  isPublic: isPublic,
+                  isMember: isMember,
+                  isAdmin: isAdmin,
+                  onJoin: () async {
+                    if (!isMember && currentUserId != null) {
+                      await _firestore.collection('groups').doc(groupId).update({
+                        'members': FieldValue.arrayUnion([currentUserId]),
+                      });
+                    }
+                  },
+                  onSettings: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GroupManagementPage(
+                          groupId: groupId,
+                          groupName: groupName,
                         ),
                       ),
-                      if (isMember &&
-                          (groupData['admins'] as List<dynamic>? ?? [])
-                              .contains(currentUserId))
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.settings, color: Colors.blue),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => GroupManagementPage(
-                                    groupId: groupId,
-                                    groupName: groupName,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      if (isMember &&
-                          (groupData['admins'] as List<dynamic>? ?? [])
-                              .contains(currentUserId))
-                        Container(
-                          margin: const EdgeInsets.only(left: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteGroup(groupId),
-                          ),
-                        ),
-                    ],
-                  ),
-                  onTap: () {
+                    );
+                  },
+                  onDelete: () => _deleteGroup(groupId),
+                  onOpen: () {
                     if (isMember) {
                       Navigator.push(
                         context,
@@ -748,9 +840,12 @@ class _ChannelsListViewState extends State<ChannelsListView> {
               final channelName = channelData['name'] ?? 'No Name';
               final bool isPublic = channelData['isPublic'] ?? true;
               final members = channelData['members'] as List<dynamic>? ?? [];
+              final admins = channelData['admins'] as List<dynamic>? ?? [];
               final currentUserId = _auth.currentUser?.uid;
               final bool isMember =
                   currentUserId != null && members.contains(currentUserId);
+              final bool isAdmin =
+                  currentUserId != null && admins.contains(currentUserId);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -779,155 +874,37 @@ class _ChannelsListViewState extends State<ChannelsListView> {
                     ),
                   ],
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF246B40),
-                          const Color(0xFF246B40).withOpacity(0.8),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF246B40).withOpacity(0.3),
-                          blurRadius: 6,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.campaign,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  title: Text(
-                    channelName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: Color(0xFF246B40),
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  subtitle: Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isPublic
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
+                child: _TeraChatListCard(
+                  leadingIcon: Icons.campaign,
+                  title: channelName,
+                  badgeLabel:
                       isPublic ? 'Public Channel' : 'Private Channel',
-                      style: TextStyle(
-                        color: isPublic ? Colors.green.shade700 : Colors.orange.shade700,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: isMember
-                                ? [Colors.grey.shade400, Colors.grey.shade500]
-                                : [const Color(0xFF246B40), const Color(0xFF246B40).withOpacity(0.8)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (isMember ? Colors.grey : const Color(0xFF246B40)).withOpacity(0.3),
-                              blurRadius: 6,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () async {
-                              if (!isMember && currentUserId != null) {
-                                await _firestore
-                                    .collection('channels')
-                                    .doc(channelId)
-                                    .update({
-                                      'members': FieldValue.arrayUnion([
-                                        currentUserId,
-                                      ]),
-                                    });
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              child: Text(
-                                isMember ? 'Joined' : 'Join',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ),
+                  isPublic: isPublic,
+                  isMember: isMember,
+                  isAdmin: isAdmin,
+                  onJoin: () async {
+                    if (!isMember && currentUserId != null) {
+                      await _firestore
+                          .collection('channels')
+                          .doc(channelId)
+                          .update({
+                        'members': FieldValue.arrayUnion([currentUserId]),
+                      });
+                    }
+                  },
+                  onSettings: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChannelManagementPage(
+                          channelId: channelId,
+                          channelName: channelName,
                         ),
                       ),
-                      if (isMember &&
-                          (channelData['admins'] as List<dynamic>? ?? [])
-                              .contains(currentUserId))
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.settings, color: Colors.blue),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ChannelManagementPage(
-                                    channelId: channelId,
-                                    channelName: channelName,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      if (isMember &&
-                          (channelData['admins'] as List<dynamic>? ?? [])
-                              .contains(currentUserId))
-                        Container(
-                          margin: const EdgeInsets.only(left: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteChannel(channelId),
-                          ),
-                        ),
-                    ],
-                  ),
-                  onTap: () {
+                    );
+                  },
+                  onDelete: () => _deleteChannel(channelId),
+                  onOpen: () {
                     if (isMember) {
                       Navigator.push(
                         context,

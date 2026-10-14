@@ -24,7 +24,6 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> with TickerProviderStateMixin {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
-  double earnings = 5000.0;
   late AnimationController _shimmerController;
   late Animation<double> _shimmerAnimation;
   late Timer? _shimmerTimer;
@@ -318,7 +317,42 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     );
   }
 
+  /// Prefer totalPayable, then itemTotal.
+  double _orderEarningsAmount(Map<String, dynamic> data) {
+    final raw = data['totalPayable'] ?? data['itemTotal'] ?? 0;
+    if (raw is num) return raw.toDouble();
+    if (raw is String) return double.tryParse(raw) ?? 0;
+    return 0;
+  }
+
+  bool _orderCountsAsEarning(Map<String, dynamic> data) {
+    final status = (data['status'] ?? 'pending').toString().toLowerCase();
+    return status != 'rejected' && status != 'cancelled';
+  }
+
   Widget _buildEarningsCard(AppLocalizations loc) {
+    if (_ordersStream == null) {
+      return _earningsCardShell(loc, 0);
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: _ordersStream,
+      builder: (context, snap) {
+        double total = 0;
+        if (snap.hasData) {
+          for (final doc in snap.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>? ?? {};
+            if (_orderCountsAsEarning(data)) {
+              total += _orderEarningsAmount(data);
+            }
+          }
+        }
+        return _earningsCardShell(loc, total);
+      },
+    );
+  }
+
+  Widget _earningsCardShell(AppLocalizations loc, double earnings) {
     return AnimatedBuilder(
       animation: _shimmerAnimation,
       builder: (context, child) {
@@ -357,15 +391,15 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
               if (_shimmerAnimation.value > 0.05 && _shimmerAnimation.value < 0.95)
                 BoxShadow(
                   color: Colors.white.withOpacity(
-                    0.6 * 
-                    (1 - ((_shimmerAnimation.value - 0.5).abs() * 2)) *
-                    (sin(_shimmerAnimation.value * 3.14159) * 0.5 + 0.5)
+                    0.6 *
+                        (1 - ((_shimmerAnimation.value - 0.5).abs() * 2)) *
+                        (sin(_shimmerAnimation.value * 3.14159) * 0.5 + 0.5),
                   ),
                   blurRadius: 12 + (_shimmerAnimation.value * 6),
                   spreadRadius: 2,
                   offset: Offset(
-                    -12 + (_shimmerAnimation.value * 24), 
-                    -12 + (_shimmerAnimation.value * 24)
+                    -12 + (_shimmerAnimation.value * 24),
+                    -12 + (_shimmerAnimation.value * 24),
                   ),
                 ),
             ],
@@ -381,10 +415,13 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                     color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                     boxShadow: [
-                      if (_shimmerAnimation.value > 0.15 && _shimmerAnimation.value < 0.85)
+                      if (_shimmerAnimation.value > 0.15 &&
+                          _shimmerAnimation.value < 0.85)
                         BoxShadow(
                           color: Colors.white.withOpacity(
-                            0.8 * (1 - ((_shimmerAnimation.value - 0.5).abs() * 2))
+                            0.8 *
+                                (1 -
+                                    ((_shimmerAnimation.value - 0.5).abs() * 2)),
                           ),
                           blurRadius: 8,
                           spreadRadius: 1,
@@ -392,7 +429,11 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                         ),
                     ],
                   ),
-                  child: const Icon(Icons.monetization_on, color: Colors.white, size: 28),
+                  child: const Icon(
+                    Icons.monetization_on,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
