@@ -53,7 +53,8 @@ class _AddressMapPickerState extends State<AddressMapPicker> {
 
   Map<String, String> get _httpHeaders => {
         'User-Agent': _userAgent,
-        'Accept-Language': 'en-IN,en,hi',
+        // English only — `hi` caused Hindi labels on first login / map pick.
+        'Accept-Language': 'en',
       };
 
   void _onSearchChanged(String query) {

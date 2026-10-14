@@ -41,24 +41,21 @@ class LocationService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Load saved Firestore location first; GPS only if nothing saved.
+  /// Load saved Firestore location first; GPS only if nothing saved / weak label.
   Future<void> ensureLocation({bool forceGps = false}) async {
     if (!forceGps &&
         _manualOverride &&
         currentAddress != null &&
         currentAddress!.isNotEmpty &&
-        currentPosition != null) {
+        currentPosition != null &&
+        !_isWeakAddress(currentAddress!)) {
       return;
     }
 
     if (!forceGps) {
       final loaded = await loadFromFirestore();
+      // Only skip GPS when we have a strong saved address.
       if (loaded) return;
-      if (currentAddress != null &&
-          currentAddress!.isNotEmpty &&
-          currentPosition != null) {
-        return;
-      }
     }
 
     await determinePosition();
@@ -80,10 +77,9 @@ class LocationService extends ChangeNotifier {
       final lat = (loc['latitude'] as num?)?.toDouble();
       final lng = (loc['longitude'] as num?)?.toDouble();
       if (address.isEmpty || lat == null || lng == null) return false;
-      // City-only labels from old GPS reverse-geocode — treat as weak.
-      final weak = address.split(',').length <= 1 && address.length < 20;
-      if (weak && !_manualOverride) {
-        // Keep coords if useful, but still try GPS for a better label later.
+
+      // City-only / Hindi labels — keep coords as seed, force GPS refine.
+      if (_isWeakAddress(address) && !_manualOverride) {
         currentAddress = address;
         currentPosition = Position(
           latitude: lat,
@@ -114,6 +110,8 @@ class LocationService extends ChangeNotifier {
     final pos = currentPosition;
     final addr = currentAddress;
     if (user == null || pos == null || addr == null || addr.isEmpty) return;
+    // Don't persist coarse city-only labels as the permanent address.
+    if (_isWeakAddress(addr)) return;
     await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
       'u_id': user.uid,
       'location': {
@@ -146,20 +144,94 @@ class LocationService extends ChangeNotifier {
       );
     }
 
-    currentPosition = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 15),
-      ),
-    );
+    // Prefer a fresh high-accuracy fix; fall back to last known if needed.
+    Position? position;
+    try {
+      position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          timeLimit: Duration(seconds: 20),
+        ),
+      );
+    } catch (e) {
+      debugPrint('getCurrentPosition failed, trying last known: $e');
+      position = await Geolocator.getLastKnownPosition();
+    }
+    if (position == null) {
+      throw Exception('Unable to get current location.');
+    }
 
-    await _getAddressFromCoordinates(currentPosition!);
+    currentPosition = position;
+    await _getAddressFromCoordinates(position);
     _manualOverride = false;
     notifyListeners();
   }
 
-  /// Street-level reverse geocode (Nominatim), not city-only.
+  /// Street-level reverse geocode — Photon then Nominatim (not city-only).
   Future<void> _getAddressFromCoordinates(Position position) async {
+    final photon = await _reversePhoton(position);
+    if (photon != null && !_isWeakAddress(photon)) {
+      currentAddress = photon;
+      return;
+    }
+
+    final nominatim = await _reverseNominatim(position);
+    if (nominatim != null && !_isWeakAddress(nominatim)) {
+      currentAddress = nominatim;
+      return;
+    }
+
+    // Prefer the more detailed of the two weak results over bare city.
+    final best = _pickBetterLabel(photon, nominatim);
+    if (best != null && best.isNotEmpty) {
+      currentAddress = best;
+      return;
+    }
+
+    currentAddress =
+        '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+  }
+
+  Future<String?> _reversePhoton(Position position) async {
+    try {
+      final url = Uri.https('photon.komoot.io', '/reverse', {
+        'lat': '${position.latitude}',
+        'lon': '${position.longitude}',
+        'lang': 'en',
+      });
+      final response = await http
+          .get(url, headers: {
+            'User-Agent': _userAgent,
+            'Accept-Language': 'en',
+          })
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) return null;
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final features = (data['features'] as List?) ?? [];
+      if (features.isEmpty) return null;
+      final props = (features.first as Map<String, dynamic>)['properties']
+              as Map<String, dynamic>? ??
+          {};
+      return _formatParts(
+        name: props['name']?.toString(),
+        house: props['housenumber']?.toString(),
+        road: props['street']?.toString(),
+        neighbourhood: props['district']?.toString(),
+        suburb: props['suburb']?.toString(),
+        city: props['city']?.toString() ??
+            props['town']?.toString() ??
+            props['village']?.toString(),
+        state: props['state']?.toString(),
+        postcode: props['postcode']?.toString(),
+        country: props['country']?.toString(),
+      );
+    } catch (e) {
+      debugPrint('Photon reverse failed: $e');
+      return null;
+    }
+  }
+
+  Future<String?> _reverseNominatim(Position position) async {
     try {
       final url = Uri.https('nominatim.openstreetmap.org', '/reverse', {
         'lat': '${position.latitude}',
@@ -171,47 +243,141 @@ class LocationService extends ChangeNotifier {
       final response = await http
           .get(url, headers: {
             'User-Agent': _userAgent,
-            'Accept-Language': 'en-IN,en,hi',
+            'Accept-Language': 'en',
           })
           .timeout(const Duration(seconds: 8));
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        final display = (data['display_name'] as String?)?.trim();
-        final addr = (data['address'] as Map<String, dynamic>?) ?? {};
-        final parts = <String>[];
-        for (final key in [
-          'road',
-          'pedestrian',
-          'neighbourhood',
-          'suburb',
-          'village',
-          'town',
-          'city_district',
-          'city',
-          'state_district',
-          'state',
-          'postcode',
-        ]) {
-          final v = addr[key]?.toString().trim();
-          if (v != null && v.isNotEmpty && !parts.contains(v)) parts.add(v);
-        }
-        if (parts.isNotEmpty) {
-          currentAddress = parts.join(', ');
-        } else if (display != null && display.isNotEmpty) {
-          currentAddress = display;
-        } else {
-          currentAddress =
-              '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
-        }
-        return;
-      }
+      if (response.statusCode != 200) return null;
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final display = (data['display_name'] as String?)?.trim();
+      final addr = (data['address'] as Map<String, dynamic>?) ?? {};
+      return _formatParts(
+        name: data['name']?.toString(),
+        house: addr['house_number']?.toString(),
+        road: addr['road']?.toString() ??
+            addr['pedestrian']?.toString() ??
+            addr['residential']?.toString(),
+        neighbourhood: addr['neighbourhood']?.toString() ??
+            addr['quarter']?.toString() ??
+            addr['suburb']?.toString(),
+        suburb: addr['suburb']?.toString(),
+        city: addr['city']?.toString() ??
+            addr['town']?.toString() ??
+            addr['village']?.toString() ??
+            addr['municipality']?.toString() ??
+            addr['city_district']?.toString(),
+        stateDistrict: addr['state_district']?.toString(),
+        state: addr['state']?.toString(),
+        postcode: addr['postcode']?.toString(),
+        country: addr['country']?.toString(),
+        fallback: display,
+      );
     } catch (e) {
       debugPrint('Nominatim reverse failed: $e');
+      return null;
+    }
+  }
+
+  String? _formatParts({
+    String? name,
+    String? house,
+    String? road,
+    String? neighbourhood,
+    String? suburb,
+    String? city,
+    String? stateDistrict,
+    String? state,
+    String? postcode,
+    String? country,
+    String? fallback,
+  }) {
+    final parts = <String>[];
+    void add(String? v) {
+      final t = v?.trim();
+      if (t == null || t.isEmpty) return;
+      if (_hasNonLatinScript(t)) return;
+      if (parts.any((p) => p.toLowerCase() == t.toLowerCase())) return;
+      parts.add(t);
     }
 
-    // Fallback: coordinates only (never city-only ORS locality).
-    currentAddress =
-        '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+    // Street-level first so we never end up with only "Chennai".
+    if (house != null && road != null) {
+      add('$house $road');
+    } else {
+      add(house);
+      add(road);
+    }
+    add(name);
+    add(neighbourhood);
+    add(suburb);
+    add(city);
+    add(stateDistrict);
+    add(state);
+    add(postcode);
+    // Skip country to keep the chip shorter.
+
+    if (parts.isNotEmpty) return parts.join(', ');
+    final fb = fallback?.trim();
+    if (fb != null && fb.isNotEmpty && !_hasNonLatinScript(fb)) return fb;
+    return null;
+  }
+
+  String? _pickBetterLabel(String? a, String? b) {
+    if (a == null || a.isEmpty) return b;
+    if (b == null || b.isEmpty) return a;
+    // More comma-separated parts ≈ more specific.
+    final scoreA = a.split(',').length;
+    final scoreB = b.split(',').length;
+    return scoreA >= scoreB ? a : b;
+  }
+
+  /// Major metros — alone or with only state/country they are too coarse.
+  static const _coarseCities = {
+    'chennai',
+    'mumbai',
+    'delhi',
+    'new delhi',
+    'bengaluru',
+    'bangalore',
+    'hyderabad',
+    'kolkata',
+    'calcutta',
+    'pune',
+    'ahmedabad',
+    'jaipur',
+    'lucknow',
+    'coimbatore',
+    'madurai',
+    'kochi',
+  };
+
+  /// City-only / Indic / too-coarse labels that need GPS refine.
+  static bool _isWeakAddress(String address) {
+    final trimmed = address.trim();
+    if (trimmed.isEmpty) return true;
+    if (_hasNonLatinScript(trimmed)) return true;
+    // Bare coordinates — refine when online reverse-geocode is available.
+    if (RegExp(r'^-?\d+\.\d+,\s*-?\d+\.\d+$').hasMatch(trimmed)) return true;
+
+    final parts = trimmed
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return true;
+    // "Chennai" alone.
+    if (parts.length == 1) return true;
+    // "Chennai, Tamil Nadu" / "Chennai, India" — still city-level.
+    // Keep "Anna Nagar, Chennai" (locality + city) as acceptable.
+    if (parts.length == 2 &&
+        _coarseCities.contains(parts[0].toLowerCase())) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Devanagari / other Indic scripts that look wrong in the English UI.
+  static bool _hasNonLatinScript(String text) {
+    return RegExp(r'[\u0900-\u097F\u0A80-\u0D7F]').hasMatch(text);
   }
 }
